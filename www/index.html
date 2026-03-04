@@ -147,6 +147,13 @@
     .dl-card .dl-icon { font-size: 1.6rem; margin-bottom: 8px; }
     .dl-card .dl-label { font-weight: 600; }
     .dl-card .dl-binary { color: #5ee89e; font-size: 0.85rem; font-family: monospace; }
+    .dl-card .dl-hash { color: rgba(255,255,255,0.45); font-size: 0.65rem; font-family: monospace; word-break: break-all; margin-top: 4px; }
+    .release-banner { color: #b8c4d0; font-size: 0.9rem; margin-bottom: 24px; }
+    .release-banner a { color: #5ee89e; text-decoration: underline; }
+    .release-banner .release-tag { font-weight: 700; color: #5ee89e; }
+    .verify-note { color: #8898a8; font-size: 0.8rem; max-width: 600px; margin: 24px auto 0; }
+    .verify-note a { color: #5ee89e; }
+    .verify-note code { background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 3px; }
 
     /* Footer */
     footer {
@@ -291,27 +298,28 @@ graph LR
     </div>
   </div>
 
-  <!-- Download -->
-  <div class="download" id="download">
+  <!-- Download (hidden until a GitHub Release exists) -->
+  <div class="download" id="download" style="display:none">
     <h2>Download Tela CLI</h2>
     <p class="download-sub">Connect to machines through your hub. Single binary, no installer.</p>
+    <p class="release-banner" id="release-banner"></p>
     <div class="download-grid">
-      <a class="dl-card" href="https://tela-local.awansatu.net/tela/windows/tela.exe">
+      <a class="dl-card" href="#" data-asset="tela-windows-amd64.exe">
         <div class="dl-icon">&#x1F5A5;&#xFE0F;</div>
         <div class="dl-label">Windows</div>
         <div class="dl-binary">tela.exe</div>
       </a>
-      <a class="dl-card" href="https://tela-local.awansatu.net/tela/linux/tela">
+      <a class="dl-card" href="#" data-asset="tela-linux-amd64">
         <div class="dl-icon">&#x1F427;</div>
         <div class="dl-label">Linux</div>
         <div class="dl-binary">tela</div>
       </a>
-      <a class="dl-card" href="https://tela-local.awansatu.net/tela/macos/tela">
+      <a class="dl-card" href="#" data-asset="tela-darwin-amd64">
         <div class="dl-icon">&#x1F34E;</div>
         <div class="dl-label">macOS (Intel)</div>
         <div class="dl-binary">tela</div>
       </a>
-      <a class="dl-card" href="https://tela-local.awansatu.net/tela/macos-arm64/tela">
+      <a class="dl-card" href="#" data-asset="tela-darwin-arm64">
         <div class="dl-icon">&#x1F34E;</div>
         <div class="dl-label">macOS (Apple Silicon)</div>
         <div class="dl-binary">tela</div>
@@ -321,28 +329,91 @@ graph LR
     <h2 style="margin-top:48px;">Download Telad Agent</h2>
     <p class="download-sub">Install on each machine you want to access. Registers with your hub and advertises services.</p>
     <div class="download-grid">
-      <a class="dl-card" href="https://tela-local.awansatu.net/telad/windows/telad.exe">
+      <a class="dl-card" href="#" data-asset="telad-windows-amd64.exe">
         <div class="dl-icon">&#x1F5A5;&#xFE0F;</div>
         <div class="dl-label">Windows</div>
         <div class="dl-binary">telad.exe</div>
       </a>
-      <a class="dl-card" href="https://tela-local.awansatu.net/telad/linux/telad">
+      <a class="dl-card" href="#" data-asset="telad-linux-amd64">
         <div class="dl-icon">&#x1F427;</div>
         <div class="dl-label">Linux</div>
         <div class="dl-binary">telad</div>
       </a>
-      <a class="dl-card" href="https://tela-local.awansatu.net/telad/macos/telad">
+      <a class="dl-card" href="#" data-asset="telad-darwin-amd64">
         <div class="dl-icon">&#x1F34E;</div>
         <div class="dl-label">macOS (Intel)</div>
         <div class="dl-binary">telad</div>
       </a>
-      <a class="dl-card" href="https://tela-local.awansatu.net/telad/macos-arm64/telad">
+      <a class="dl-card" href="#" data-asset="telad-darwin-arm64">
         <div class="dl-icon">&#x1F34E;</div>
         <div class="dl-label">macOS (Apple Silicon)</div>
         <div class="dl-binary">telad</div>
       </a>
     </div>
+    <p class="verify-note">Binaries are built by <a href="https://github.com/paulmooreparks/tela/actions">GitHub Actions</a> from <a href="https://github.com/paulmooreparks/tela">public source</a>. Verify with <code>sha256sum</code> or <code>Get-FileHash</code>.</p>
   </div>
+
+  <script>
+  // ── Release version + hashes from GitHub ────────────────────────
+  (function () {
+    var REPO = 'paulmooreparks/tela';
+    var API  = 'https://api.github.com/repos/' + REPO + '/releases/latest';
+
+    fetch(API)
+      .then(function (r) { return r.json(); })
+      .then(function (rel) {
+        if (!rel.tag_name) return;
+
+        // Build asset URL map
+        var assetMap = {};
+        (rel.assets || []).forEach(function (a) { assetMap[a.name] = a.browser_download_url; });
+
+        // Update download card hrefs from data-asset attribute
+        var anyLinked = false;
+        document.querySelectorAll('.dl-card[data-asset]').forEach(function (card) {
+          var name = card.getAttribute('data-asset');
+          if (assetMap[name]) {
+            card.href = assetMap[name];
+            anyLinked = true;
+          }
+        });
+
+        if (!anyLinked) return; // no matching assets — keep section hidden
+
+        // Show the download section
+        document.getElementById('download').style.display = '';
+
+        // Show version banner
+        var banner = document.getElementById('release-banner');
+        banner.innerHTML = 'Latest release: <span class="release-tag">' + rel.tag_name + '</span>'
+          + ' &middot; <a href="' + rel.html_url + '">Release notes &amp; checksums</a>';
+
+        // Parse SHA256SUMS.txt and show hashes under each card
+        var sumAsset = (rel.assets || []).filter(function (a) { return a.name === 'SHA256SUMS.txt'; })[0];
+        if (sumAsset) {
+          fetch(sumAsset.browser_download_url)
+            .then(function (r) { return r.text(); })
+            .then(function (txt) {
+              var hashMap = {};
+              txt.trim().split('\n').forEach(function (line) {
+                var parts = line.trim().split(/\s+/);
+                if (parts.length >= 2) hashMap[parts[1]] = parts[0];
+              });
+              document.querySelectorAll('.dl-card[data-asset]').forEach(function (card) {
+                var name = card.getAttribute('data-asset');
+                if (hashMap[name]) {
+                  var hashEl = document.createElement('div');
+                  hashEl.className = 'dl-hash';
+                  hashEl.textContent = 'sha256: ' + hashMap[name];
+                  card.appendChild(hashEl);
+                }
+              });
+            });
+        }
+      })
+      .catch(function () { /* no release yet — section stays hidden */ });
+  })();
+  </script>
 
   <footer>
     <p>Awan Satu &middot; Powered by <a href="https://github.com/paulmooreparks/tela">Tela</a></p>

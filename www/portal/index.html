@@ -53,6 +53,7 @@
     .stat-card .label { font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
     .stat-card .value { font-size: 1.6rem; font-weight: 700; color: #222; margin-top: 4px; }
     .stat-card .value.green { color: #2d7d46; }
+    .stat-card .value .online-count { color: #2d7d46; font-size: 1.1rem; font-weight: 600; }
 
     /* Cards */
     .card {
@@ -169,24 +170,16 @@
     <!-- Summary stats -->
     <div class="stats">
       <div class="stat-card">
-        <div class="label">Hubs</div>
-        <div class="value" id="stat-hubs">-</div>
+        <div class="label">Hubs (Online)</div>
+        <div class="value" id="stat-hubs">- <span class="online-count">(-)</span></div>
       </div>
       <div class="stat-card">
-        <div class="label">Machines</div>
-        <div class="value" id="stat-machines">-</div>
+        <div class="label">Machines (Online)</div>
+        <div class="value" id="stat-machines">- <span class="online-count">(-)</span></div>
       </div>
       <div class="stat-card">
-        <div class="label">Online</div>
-        <div class="value green" id="stat-online">-</div>
-      </div>
-      <div class="stat-card">
-        <div class="label">Services</div>
-        <div class="value" id="stat-services">-</div>
-      </div>
-      <div class="stat-card">
-        <div class="label">Active Sessions</div>
-        <div class="value green" id="stat-sessions">-</div>
+        <div class="label">Services (Active)</div>
+        <div class="value" id="stat-services">- <span class="online-count">(-)</span></div>
       </div>
     </div>
 
@@ -360,11 +353,9 @@
           + '<p>Add a Tela hub below to get started.</p></div>';
         document.getElementById('machines-content').innerHTML = '<p class="no-data">No hubs configured.</p>';
         document.getElementById('history-content').innerHTML = '<p class="no-data">No hubs configured.</p>';
-        document.getElementById('stat-hubs').textContent = '0';
-        document.getElementById('stat-machines').textContent = '0';
-        document.getElementById('stat-online').textContent = '0';
-        document.getElementById('stat-services').textContent = '0';
-        document.getElementById('stat-sessions').textContent = '0';
+        document.getElementById('stat-hubs').innerHTML = '0 <span class="online-count">(0)</span>';
+        document.getElementById('stat-machines').innerHTML = '0 <span class="online-count">(0)</span>';
+        document.getElementById('stat-services').innerHTML = '0 <span class="online-count">(0)</span>';
         return;
       }
 
@@ -391,8 +382,17 @@
         var consoleLink = '<a class="btn-console" href="' + escHtml(r.hub.url) + '/" target="_blank">\u2197 Console</a>';
         var removeBtn = '<button class="btn-remove" onclick="removeHub(' + idx + ')" title="Remove hub">\u2716</button>';
 
+        var hubMeta = [];
+        var hi = r.data.hub || {};
+        if (hi.os)          hubMeta.push('<span>' + escHtml(hi.os) + '/' + escHtml(hi.arch || '') + '</span>');
+        if (hi.hostname)    hubMeta.push('<span>\uD83D\uDCBB ' + escHtml(hi.hostname) + '</span>');
+        if (hi.nodeVersion) hubMeta.push('<span>node ' + escHtml(hi.nodeVersion) + '</span>');
+
+        var hubCell = '<span class="hub-name">' + escHtml(r.hubName) + '</span><br><span class="hub-url">' + escHtml(r.hub.url) + '</span>';
+        if (hubMeta.length > 0) hubCell += '<div class="machine-meta">' + hubMeta.join('') + '</div>';
+
         hubsHtml += '<tr>'
-          + '<td><span class="hub-name">' + escHtml(r.hubName) + '</span><br><span class="hub-url">' + escHtml(r.hub.url) + '</span></td>'
+          + '<td>' + hubCell + '</td>'
           + '<td>' + dot + '</td>'
           + '<td>' + machines.length + '</td>'
           + '<td>' + online + '</td>'
@@ -405,11 +405,10 @@
       document.getElementById('hubs-content').innerHTML = hubsHtml;
 
       // Stats
-      document.getElementById('stat-hubs').textContent = results.length;
-      document.getElementById('stat-machines').textContent = totalMachines;
-      document.getElementById('stat-online').textContent = totalOnline;
-      document.getElementById('stat-services').textContent = totalServices;
-      document.getElementById('stat-sessions').textContent = totalSessions;
+      var hubsOnline = results.filter(function (r) { return r.status === 'online'; }).length;
+      document.getElementById('stat-hubs').innerHTML = results.length + ' <span class="online-count">(' + hubsOnline + ')</span>';
+      document.getElementById('stat-machines').innerHTML = totalMachines + ' <span class="online-count">(' + totalOnline + ')</span>';
+      document.getElementById('stat-services').innerHTML = totalServices + ' <span class="online-count">(' + totalSessions + ')</span>';
 
       // Aggregated machines table
       var allMachines = [];
