@@ -109,25 +109,19 @@
 
     /* Architecture */
     .architecture {
-      max-width: 800px;
+      max-width: 900px;
       margin: 0 auto;
       padding: 60px 24px;
       text-align: center;
     }
     .architecture h2 { font-size: 1.4rem; margin-bottom: 24px; }
-    .arch-diagram {
+    .mermaid-wrap {
       background: #1a1a2e;
-      color: #b8c4d0;
-      padding: 24px 32px;
+      padding: 32px 24px;
       border-radius: 10px;
-      font-family: 'Consolas', 'Courier New', monospace;
-      font-size: 0.85rem;
-      line-height: 1.4;
-      text-align: left;
-      white-space: pre;
       overflow-x: auto;
     }
-    .arch-diagram em { color: #5ee89e; font-style: normal; }
+    .mermaid-wrap .mermaid svg { max-width: 100%; height: auto; }
 
     /* Download */
     .download {
@@ -164,6 +158,8 @@
     footer a { color: #666; text-decoration: none; }
     footer a:hover { text-decoration: underline; }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
 </head>
 <body>
 
@@ -184,7 +180,7 @@
   <div class="hero">
     <h1><em>Awan</em> Satu</h1>
     <p class="tagline">
-      The connectivity platform for <strong>Tela</strong>. Manage machines, services,
+      The connectivity platform for <a href="https://github.com/paulmooreparks/tela" style="color:#5ee89e;text-decoration:underline;"><strong>Tela</strong></a>. Manage machines, services,
       and encrypted tunnels across all your hubs from a single dashboard.
     </p>
     <div class="cta-row">
@@ -238,51 +234,67 @@
       <ol class="steps">
         <li>
           <div>
-            <strong>Install the agent</strong>
-            <span class="desc">Run <code>telad</code> on each machine you want to access. It registers with your hub and advertises services (SSH, RDP, etc.).</span>
+            <strong>Install the agent on each machine</strong>
+            <span class="desc"><a href="#download" style="color:#5ee89e;">Download <code>telad</code></a> and run it on every machine you want to access remotely. It connects to your hub (a lightweight relay server) and advertises the machine&rsquo;s services&mdash;SSH, RDP, HTTP, or any TCP port.</span>
           </div>
         </li>
         <li>
           <div>
-            <strong>Connect through the hub</strong>
-            <span class="desc">Run <code>tela connect -hub owlsnest -machine barn</code>. The CLI sets up a WireGuard tunnel through the hub, then upgrades to direct P2P when possible.</span>
+            <strong>Connect from anywhere</strong>
+            <span class="desc">On your workstation, run:<br><code style="display:inline-block;margin:6px 0;background:rgba(0,0,0,0.2);padding:4px 10px;border-radius:4px;">tela connect -hub &lt;hub-name&gt; -machine &lt;machine-name&gt;</code><br>where <code>&lt;hub-name&gt;</code> is a short alias for your hub and <code>&lt;machine-name&gt;</code> is the ID of the target machine. The CLI establishes an encrypted WireGuard tunnel through the hub, then automatically upgrades to a direct peer-to-peer connection when possible.</span>
           </div>
         </li>
         <li>
           <div>
             <strong>Manage from the portal</strong>
-            <span class="desc">Open the Awan Satu portal to see all your hubs, machines, and sessions. Grant access to teammates without sharing credentials.</span>
+            <span class="desc">Open the <a href="/portal/" style="color:#5ee89e;">Awan Satu portal</a> to see all your hubs, machines, and active sessions in one place. Grant access to teammates without sharing credentials or exposing infrastructure.</span>
           </div>
         </li>
       </ol>
+      <p style="margin-top:24px;text-align:center;">
+        <a href="https://github.com/paulmooreparks/tela#readme" class="btn-secondary" style="font-size:0.9rem;">Read the full Getting Started guide &rarr;</a>
+      </p>
     </div>
   </div>
 
   <!-- Architecture -->
   <div class="architecture">
     <h2>Architecture</h2>
-    <div class="arch-diagram">
-<em>Users</em>                              <em>Infrastructure</em>
+    <div class="mermaid-wrap">
+      <pre class="mermaid">
+graph LR
+  subgraph Users
+    CLI["tela CLI<br/><small>connect</small>"]
+    Browser["Browser<br/><small>dashboard</small>"]
+  end
 
-&#x250C;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2510;           &#x250C;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2510;
-&#x2502; <em>tela CLI</em>     &#x2502; &#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x25B6; &#x2502;  <em>Tela Hub</em>     &#x2502; &#x25C0;&#x2500;&#x2500;&#x2500; &#x250C;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2510;
-&#x2502; (connect)    &#x2502;           &#x2502;  (relay +     &#x2502;       &#x2502; <em>telad</em>    &#x2502;
-&#x2514;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2518;           &#x2502;   console)    &#x2502;       &#x2502; (agent)  &#x2502;
-                              &#x2514;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2518;       &#x2514;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2518;
-                                      &#x2502;
-<em>Platform</em>                      &#x250C;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2534;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2510;
-                              &#x2502; <em>Awan Satu</em>     &#x2502;
-&#x250C;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2510;           &#x2502;  (portal +    &#x2502;
-&#x2502; <em>Browser</em>     &#x2502; &#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x25B6; &#x2502;   dashboard)  &#x2502;
-&#x2502; (dashboard) &#x2502;           &#x2514;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2518;
-&#x2514;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2518;
+  subgraph Infrastructure
+    Hub["Tela Hub<br/><small>relay + console</small>"]
+    Agent["telad<br/><small>agent</small>"]
+  end
+
+  subgraph Platform
+    Portal["Awan Satu<br/><small>portal + dashboard</small>"]
+  end
+
+  CLI -- "WireGuard tunnel" --> Hub
+  Agent -- "register + relay" --> Hub
+  Hub -- "API" --> Portal
+  Browser --> Portal
+
+  style CLI fill:#1a1a2e,stroke:#5ee89e,color:#fff
+  style Browser fill:#1a1a2e,stroke:#5ee89e,color:#fff
+  style Hub fill:#16213e,stroke:#5ee89e,color:#fff
+  style Agent fill:#16213e,stroke:#5ee89e,color:#fff
+  style Portal fill:#0f3460,stroke:#5ee89e,color:#fff
+      </pre>
     </div>
   </div>
 
   <!-- Download -->
   <div class="download" id="download">
     <h2>Download Tela CLI</h2>
-    <p class="download-sub">Single binary. No installer needed. Just download and run.</p>
+    <p class="download-sub">Connect to machines through your hub. Single binary, no installer.</p>
     <div class="download-grid">
       <a class="dl-card" href="https://tela-local.awansatu.net/tela/windows/tela.exe">
         <div class="dl-icon">&#x1F5A5;&#xFE0F;</div>
@@ -303,6 +315,31 @@
         <div class="dl-icon">&#x1F34E;</div>
         <div class="dl-label">macOS (Apple Silicon)</div>
         <div class="dl-binary">tela</div>
+      </a>
+    </div>
+
+    <h2 style="margin-top:48px;">Download Telad Agent</h2>
+    <p class="download-sub">Install on each machine you want to access. Registers with your hub and advertises services.</p>
+    <div class="download-grid">
+      <a class="dl-card" href="https://tela-local.awansatu.net/telad/windows/telad.exe">
+        <div class="dl-icon">&#x1F5A5;&#xFE0F;</div>
+        <div class="dl-label">Windows</div>
+        <div class="dl-binary">telad.exe</div>
+      </a>
+      <a class="dl-card" href="https://tela-local.awansatu.net/telad/linux/telad">
+        <div class="dl-icon">&#x1F427;</div>
+        <div class="dl-label">Linux</div>
+        <div class="dl-binary">telad</div>
+      </a>
+      <a class="dl-card" href="https://tela-local.awansatu.net/telad/macos/telad">
+        <div class="dl-icon">&#x1F34E;</div>
+        <div class="dl-label">macOS (Intel)</div>
+        <div class="dl-binary">telad</div>
+      </a>
+      <a class="dl-card" href="https://tela-local.awansatu.net/telad/macos-arm64/telad">
+        <div class="dl-icon">&#x1F34E;</div>
+        <div class="dl-label">macOS (Apple Silicon)</div>
+        <div class="dl-binary">telad</div>
       </a>
     </div>
   </div>

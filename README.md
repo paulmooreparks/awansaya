@@ -11,21 +11,20 @@ Awan Satu is the platform layer that sits above one or more Tela hubs, providing
 
 ## Architecture
 
-```
-┌─────────────────────────────┐
-│       awansatu.net          │
-│  ┌───────────┐ ┌──────────┐│
-│  │  Landing   │ │  Portal  ││
-│  │  Page      │ │Dashboard ││
-│  └───────────┘ └────┬─────┘│
-└─────────────────────┼──────┘
-                      │ fetches /api/status, /api/history
-          ┌───────────┼───────────┐
-          ▼           ▼           ▼
-     ┌─────────┐ ┌─────────┐ ┌─────────┐
-     │  Hub A  │ │  Hub B  │ │  Hub C  │
-     │  (home) │ │ (work)  │ │ (cloud) │
-     └─────────┘ └─────────┘ └─────────┘
+```mermaid
+flowchart TB
+  subgraph "awansatu.net"
+    LP[Landing Page]
+    PD[Portal Dashboard]
+  end
+
+  PD -->|"fetches /api/status,\n/api/history"| HA
+  PD -->|"fetches /api/status,\n/api/history"| HB
+  PD -->|"fetches /api/status,\n/api/history"| HC
+
+  HA["Hub A\n(home)"]
+  HB["Hub B\n(work)"]
+  HC["Hub C\n(cloud)"]
 ```
 
 ## Development
