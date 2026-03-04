@@ -6,7 +6,26 @@ Awan Satu is the platform layer for [Tela](https://github.com/paulmooreparks/tel
 
 **Tela : Awan Satu :: git : GitHub**
 
-You can use Tela standalone — just like you can use git without GitHub. Awan Satu makes it easier to manage at scale.
+You can use Tela standalone, just like you can use git without GitHub. Awan Satu makes it easier to manage at scale.
+
+---
+
+## Deployment Patterns (Tela Works Either Way)
+
+The scenarios below assume one of two common patterns:
+
+### Pattern A: Endpoint Agent (Canonical)
+
+- `telad` runs on each machine you want to access.
+- Simplest model: each “machine” in the hub maps to a real host running `telad`.
+
+### Pattern B: Gateway / Bridge Agent
+
+- `telad` runs on a gateway (VM/container/bastion) that can reach one or more target machines.
+- Useful when targets are locked down (can’t install agents) or when you prefer to centralize the software footprint.
+- Operationally, this is a modern “bastion” pattern: secure when paired with segmentation, allowlists, and strong service auth.
+
+Awan Satu doesn’t require one pattern or the other. It helps teams manage hubs and access consistently regardless of which topology they choose.
 
 ---
 
@@ -26,7 +45,7 @@ You can use Tela standalone — just like you can use git without GitHub. Awan S
 
 ### 1. Personal Cloud / Homelab Remote Access
 
-**Scenario:** You have machines at home (NAS, media server, dev workstation) and want to reach them from anywhere — including locked-down corporate laptops.
+**Scenario:** You have machines at home (NAS, media server, dev workstation) and want to reach them from anywhere, including locked-down corporate laptops.
 
 **With Tela + Awan Satu:**
 
@@ -162,4 +181,4 @@ No existing combination provides all of:
 5. **Named hub resolution via portal** — `tela connect -hub owlsnest`, not `wss://10.0.8.14:8443`
 6. **Federated multi-hub portal** — one dashboard for many sites, customers, or environments
 
-Tailscale comes closest but requires system-level installation. Cloudflare Tunnel is HTTP-focused. Teleport and Boundary are enterprise-heavy. MeshCentral is screen-sharing-centric. Tela + Awan Satu occupy the gap between "just use SSH" and "deploy an enterprise zero-trust platform" — with a clean separation between the connectivity fabric and the management layer.
+Tailscale comes closest but requires system-level installation. Cloudflare Tunnel is HTTP-focused. Teleport and Boundary are enterprise-heavy. MeshCentral is screen-sharing-centric. Tela + Awan Satu occupy the gap between "just use SSH" and "deploy an enterprise zero-trust platform," with a clean separation between the connectivity fabric and the management layer.
