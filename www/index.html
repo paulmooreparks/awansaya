@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Awan Satu — Connectivity Platform for Tela</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      color: #222;
+      line-height: 1.6;
+      background: #fafafa;
+    }
+
+    /* Top nav */
+    .topnav {
+      background: #1a1a2e;
+      color: #fff;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      height: 56px;
+      gap: 24px;
+    }
+    .topnav .logo { font-weight: 700; font-size: 1.2rem; letter-spacing: 0.5px; text-decoration: none; color: #fff; }
+    .topnav .logo em { color: #5ee89e; font-style: normal; }
+    .topnav nav { display: flex; gap: 16px; font-size: 0.9rem; }
+    .topnav nav a { color: #ccc; text-decoration: none; padding: 4px 0; }
+    .topnav nav a:hover { color: #fff; border-bottom: 2px solid #5ee89e; }
+    .topnav .spacer { flex: 1; }
+    .topnav .cta-nav { background: #5ee89e; color: #1a1a2e; padding: 6px 16px; border-radius: 4px; text-decoration: none; font-weight: 600; font-size: 0.85rem; }
+    .topnav .cta-nav:hover { background: #4dd889; }
+
+    /* Hero */
+    .hero {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      color: #fff;
+      text-align: center;
+      padding: 80px 24px 60px;
+    }
+    .hero h1 { font-size: 2.8rem; font-weight: 800; margin-bottom: 16px; }
+    .hero h1 em { color: #5ee89e; font-style: normal; }
+    .hero .tagline { font-size: 1.2rem; color: #b8c4d0; max-width: 640px; margin: 0 auto 32px; }
+    .hero .cta-row { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+    .btn-primary {
+      display: inline-block; background: #5ee89e; color: #1a1a2e; padding: 12px 28px;
+      border-radius: 6px; text-decoration: none; font-weight: 700; font-size: 1rem;
+      transition: background 0.15s;
+    }
+    .btn-primary:hover { background: #4dd889; }
+    .btn-secondary {
+      display: inline-block; background: transparent; color: #fff; padding: 12px 28px;
+      border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 1rem;
+      border: 2px solid rgba(255,255,255,0.3); transition: border-color 0.15s;
+    }
+    .btn-secondary:hover { border-color: #5ee89e; color: #5ee89e; }
+
+    /* Features */
+    .features {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 60px 24px;
+    }
+    .features h2 { text-align: center; font-size: 1.6rem; margin-bottom: 8px; }
+    .features .features-sub { text-align: center; color: #666; margin-bottom: 40px; }
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px;
+    }
+    .feature-card {
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 10px;
+      padding: 28px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .feature-card .icon { font-size: 1.8rem; margin-bottom: 12px; }
+    .feature-card h3 { font-size: 1.05rem; margin-bottom: 8px; }
+    .feature-card p { color: #666; font-size: 0.9rem; }
+
+    /* How it works */
+    .how-it-works {
+      background: #fff;
+      border-top: 1px solid #e8e8e8;
+      border-bottom: 1px solid #e8e8e8;
+      padding: 60px 24px;
+    }
+    .how-it-works .container { max-width: 800px; margin: 0 auto; }
+    .how-it-works h2 { text-align: center; font-size: 1.4rem; margin-bottom: 32px; }
+    .steps { list-style: none; counter-reset: step; }
+    .steps li {
+      counter-increment: step;
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 20px;
+      font-size: 0.95rem;
+    }
+    .steps li::before {
+      content: counter(step);
+      display: flex; align-items: center; justify-content: center;
+      min-width: 36px; height: 36px; border-radius: 50%;
+      background: #1a1a2e; color: #5ee89e; font-weight: 700; font-size: 0.95rem;
+    }
+    .steps li strong { display: block; margin-bottom: 2px; }
+    .steps li .desc { color: #555; }
+
+    /* Architecture */
+    .architecture {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 60px 24px;
+      text-align: center;
+    }
+    .architecture h2 { font-size: 1.4rem; margin-bottom: 24px; }
+    .arch-diagram {
+      background: #1a1a2e;
+      color: #b8c4d0;
+      padding: 24px 32px;
+      border-radius: 10px;
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 0.85rem;
+      line-height: 1.4;
+      text-align: left;
+      white-space: pre;
+      overflow-x: auto;
+    }
+    .arch-diagram em { color: #5ee89e; font-style: normal; }
+
+    /* Download */
+    .download {
+      background: linear-gradient(135deg, #16213e 0%, #1a1a2e 100%);
+      color: #fff;
+      text-align: center;
+      padding: 60px 24px;
+    }
+    .download h2 { font-size: 1.6rem; margin-bottom: 8px; }
+    .download .download-sub { color: #b8c4d0; margin-bottom: 32px; }
+    .download-grid { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+    .dl-card {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 8px;
+      padding: 20px 28px;
+      min-width: 160px;
+      text-decoration: none;
+      color: #fff;
+      transition: background 0.15s;
+    }
+    .dl-card:hover { background: rgba(255,255,255,0.14); }
+    .dl-card .dl-icon { font-size: 1.6rem; margin-bottom: 8px; }
+    .dl-card .dl-label { font-weight: 600; }
+    .dl-card .dl-binary { color: #5ee89e; font-size: 0.85rem; font-family: monospace; }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 32px 24px;
+      color: #999;
+      font-size: 0.85rem;
+    }
+    footer a { color: #666; text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+  <!-- Top nav -->
+  <div class="topnav">
+    <a href="/" class="logo"><em>Awan</em>Satu</a>
+    <nav>
+      <a href="#features">Features</a>
+      <a href="#how-it-works">How It Works</a>
+      <a href="#download">Download</a>
+      <a href="/portal/">Portal</a>
+    </nav>
+    <div class="spacer"></div>
+    <a href="/portal/" class="cta-nav">Open Portal</a>
+  </div>
+
+  <!-- Hero -->
+  <div class="hero">
+    <h1><em>Awan</em> Satu</h1>
+    <p class="tagline">
+      The connectivity platform for <strong>Tela</strong>. Manage machines, services,
+      and encrypted tunnels across all your hubs from a single dashboard.
+    </p>
+    <div class="cta-row">
+      <a href="/portal/" class="btn-primary">Open Portal</a>
+      <a href="#download" class="btn-secondary">Download Tela CLI</a>
+    </div>
+  </div>
+
+  <!-- Features -->
+  <div class="features" id="features">
+    <h2>Why Awan Satu?</h2>
+    <p class="features-sub">One platform. All your hubs. Every machine.</p>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="icon">&#x1F310;</div>
+        <h3>Multi-Hub Aggregation</h3>
+        <p>See every machine across every hub in one dashboard. No more switching between consoles.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">&#x1F512;</div>
+        <h3>End-to-End Encrypted</h3>
+        <p>Tela tunnels use WireGuard encryption. The hub never sees your traffic &mdash; only metadata.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">&#x26A1;</div>
+        <h3>Zero Config Networking</h3>
+        <p>STUN hole-punching with automatic relay fallback. Works through NAT, firewalls, and CGN.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">&#x1F4BB;</div>
+        <h3>Cross-Platform CLI</h3>
+        <p>One binary for Windows, Linux, and macOS. Named hub aliases for fast, ergonomic access.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">&#x1F3E2;</div>
+        <h3>Federation</h3>
+        <p>Any Tela hub can be registered with any portal. Hub owners keep full control of their infrastructure.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">&#x1F464;</div>
+        <h3>User-Centric Access</h3>
+        <p>Users see machines, not infrastructure. Grant access without exposing hub topology.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- How it works -->
+  <div class="how-it-works" id="how-it-works">
+    <div class="container">
+      <h2>How It Works</h2>
+      <ol class="steps">
+        <li>
+          <div>
+            <strong>Install the agent</strong>
+            <span class="desc">Run <code>telad</code> on each machine you want to access. It registers with your hub and advertises services (SSH, RDP, etc.).</span>
+          </div>
+        </li>
+        <li>
+          <div>
+            <strong>Connect through the hub</strong>
+            <span class="desc">Run <code>tela connect -hub owlsnest -machine barn</code>. The CLI sets up a WireGuard tunnel through the hub, then upgrades to direct P2P when possible.</span>
+          </div>
+        </li>
+        <li>
+          <div>
+            <strong>Manage from the portal</strong>
+            <span class="desc">Open the Awan Satu portal to see all your hubs, machines, and sessions. Grant access to teammates without sharing credentials.</span>
+          </div>
+        </li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- Architecture -->
+  <div class="architecture">
+    <h2>Architecture</h2>
+    <div class="arch-diagram">
+<em>Users</em>                              <em>Infrastructure</em>
+
+&#x250C;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2510;           &#x250C;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2510;
+&#x2502; <em>tela CLI</em>     &#x2502; &#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x25B6; &#x2502;  <em>Tela Hub</em>     &#x2502; &#x25C0;&#x2500;&#x2500;&#x2500; &#x250C;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2510;
+&#x2502; (connect)    &#x2502;           &#x2502;  (relay +     &#x2502;       &#x2502; <em>telad</em>    &#x2502;
+&#x2514;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2518;           &#x2502;   console)    &#x2502;       &#x2502; (agent)  &#x2502;
+                              &#x2514;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2518;       &#x2514;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2518;
+                                      &#x2502;
+<em>Platform</em>                      &#x250C;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2534;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2510;
+                              &#x2502; <em>Awan Satu</em>     &#x2502;
+&#x250C;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2510;           &#x2502;  (portal +    &#x2502;
+&#x2502; <em>Browser</em>     &#x2502; &#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x25B6; &#x2502;   dashboard)  &#x2502;
+&#x2502; (dashboard) &#x2502;           &#x2514;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2518;
+&#x2514;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2518;
+    </div>
+  </div>
+
+  <!-- Download -->
+  <div class="download" id="download">
+    <h2>Download Tela CLI</h2>
+    <p class="download-sub">Single binary. No installer needed. Just download and run.</p>
+    <div class="download-grid">
+      <a class="dl-card" href="https://tela-local.awansatu.net/tela/windows/tela.exe">
+        <div class="dl-icon">&#x1F5A5;&#xFE0F;</div>
+        <div class="dl-label">Windows</div>
+        <div class="dl-binary">tela.exe</div>
+      </a>
+      <a class="dl-card" href="https://tela-local.awansatu.net/tela/linux/tela">
+        <div class="dl-icon">&#x1F427;</div>
+        <div class="dl-label">Linux</div>
+        <div class="dl-binary">tela</div>
+      </a>
+      <a class="dl-card" href="https://tela-local.awansatu.net/tela/macos/tela">
+        <div class="dl-icon">&#x1F34E;</div>
+        <div class="dl-label">macOS (Intel)</div>
+        <div class="dl-binary">tela</div>
+      </a>
+      <a class="dl-card" href="https://tela-local.awansatu.net/tela/macos-arm64/tela">
+        <div class="dl-icon">&#x1F34E;</div>
+        <div class="dl-label">macOS (Apple Silicon)</div>
+        <div class="dl-binary">tela</div>
+      </a>
+    </div>
+  </div>
+
+  <footer>
+    <p>Awan Satu &middot; Powered by <a href="https://github.com/paulmooreparks/tela">Tela</a></p>
+    <p style="margin-top:4px;"><a href="https://github.com/paulmooreparks/awansatu">GitHub</a></p>
+  </footer>
+
+</body>
+</html>

@@ -1,0 +1,9 @@
+services:
+  portal:
+    build: .
+    container_name: awansatu-portal
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      PORT: 3000

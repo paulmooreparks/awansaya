@@ -24,7 +24,7 @@ Awan Satu is the platform layer that sits above one or more Tela hubs, providing
           ▼           ▼           ▼
      ┌─────────┐ ┌─────────┐ ┌─────────┐
      │  Hub A  │ │  Hub B  │ │  Hub C  │
-     │(owlsnest│ │ (work)  │ │ (cloud) │
+     │  (home) │ │ (work)  │ │ (cloud) │
      └─────────┘ └─────────┘ └─────────┘
 ```
 
