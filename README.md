@@ -18,13 +18,13 @@ flowchart TB
     PD[Portal Dashboard]
   end
 
-  PD -->|"fetches /api/status,\n/api/history"| HA
-  PD -->|"fetches /api/status,\n/api/history"| HB
-  PD -->|"fetches /api/status,\n/api/history"| HC
+  PD -->|"fetches /api/status, /api/history"| HA
+  PD -->|"fetches /api/status, /api/history"| HB
+  PD -->|"fetches /api/status, /api/history"| HC
 
-  HA["Hub A\n(home)"]
-  HB["Hub B\n(work)"]
-  HC["Hub C\n(cloud)"]
+  HA["Hub A (home)"]
+  HB["Hub B (work)"]
+  HC["Hub C (cloud)"]
 ```
 
 ## Development

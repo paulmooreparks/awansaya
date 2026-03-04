@@ -239,26 +239,41 @@
 
   <script>
     // ── Hub registry ────────────────────────────────────────────────
-    // Hubs are stored in localStorage. On first load, seed with the
-    // default hub if none exist yet.
+    // Hubs are stored in localStorage. On first visit (or when localStorage
+    // is empty), defaults are loaded from /portal/config.json.
     var STORAGE_KEY = 'awansatu-hubs';
-    var DEFAULT_HUBS = [
-      { name: 'owlsnest', url: 'https://tela-local.awansatu.net' }
-    ];
 
-    function loadHubs() {
+    function loadHubsFromStorage() {
       try {
         var stored = JSON.parse(localStorage.getItem(STORAGE_KEY));
         if (Array.isArray(stored) && stored.length > 0) return stored;
       } catch (e) {}
-      return DEFAULT_HUBS.slice();
+      return null;
     }
 
     function saveHubs(hubs) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(hubs));
     }
 
-    var HUBS = loadHubs();
+    var HUBS = loadHubsFromStorage();
+
+    function boot() {
+      if (HUBS) { initDashboard(); return; }
+      // First visit — fetch defaults from config.json
+      fetch('config.json')
+        .then(function (r) { return r.json(); })
+        .then(function (cfg) {
+          HUBS = (cfg && Array.isArray(cfg.hubs)) ? cfg.hubs : [];
+          saveHubs(HUBS);
+          initDashboard();
+        })
+        .catch(function () {
+          HUBS = [];
+          initDashboard();
+        });
+    }
+
+    function initDashboard() {
 
     // ── Add hub form ────────────────────────────────────────────────
     document.getElementById('add-hub-form').addEventListener('submit', function (e) {
@@ -483,12 +498,15 @@
 
     // ── Poll loop ───────────────────────────────────────────────────
     function poll() {
-      HUBS = loadHubs();
+      HUBS = loadHubsFromStorage() || HUBS;
       fetchAllHubs().then(render);
     }
 
     poll();
     setInterval(poll, 5000);
+    } // end initDashboard
+
+    boot();
   </script>
 </body>
 </html>
