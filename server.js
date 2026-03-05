@@ -10,7 +10,7 @@ const path = require('path');
 
 const PORT          = parseInt(process.env.PORT || '3000', 10);
 const WWW_DIR       = path.join(__dirname, 'www');
-const API_TOKEN     = process.env.TELA_API_TOKEN || '';   // empty = open mode
+const API_TOKEN     = process.env.AWANSATU_API_TOKEN || '';   // empty = open mode
 const CONFIG_PATH   = path.join(WWW_DIR, 'portal', 'config.json');
 
 const MIME = {

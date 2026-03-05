@@ -62,13 +62,13 @@ Verify the directory API:
 
 Awan Satu supports a simple shared token today.
 
-- If `TELA_API_TOKEN` is **unset**, `/api/hubs` runs in open mode.
-- If `TELA_API_TOKEN` is **set**, clients must send `Authorization: Bearer <token>`.
+- If `AWANSATU_API_TOKEN` is **unset**, `/api/hubs` runs in open mode.
+- If `AWANSATU_API_TOKEN` is **set**, clients must send `Authorization: Bearer <token>`.
 
 Set it in your deployment environment (example):
 
 ```bash
-export TELA_API_TOKEN="your-long-random-token"
+export AWANSATU_API_TOKEN="your-long-random-token"
 ```
 
 Restart Awan Satu.
@@ -98,7 +98,7 @@ tela login https://awansatu.net
 ```
 
 - If your portal is in open mode, you can press Enter when prompted for a token.
-- If your portal enforces `TELA_API_TOKEN`, paste the token.
+- If your portal enforces `AWANSATU_API_TOKEN`, paste the token.
 
 3. List machines by hub name:
 

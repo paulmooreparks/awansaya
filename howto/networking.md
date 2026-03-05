@@ -21,7 +21,7 @@ Browser constraints to keep in mind:
 For the Tela CLI to resolve hub names:
 
 - The CLI must be able to fetch `GET https://awansatu.net/api/hubs` (or your self-hosted equivalent).
-- If the Awan Satu server is configured with `TELA_API_TOKEN`, the request must send `Authorization: Bearer <token>`.
+- If the Awan Satu server is configured with `AWANSATU_API_TOKEN`, the request must send `Authorization: Bearer <token>`.
 
 ## Common failure modes
 

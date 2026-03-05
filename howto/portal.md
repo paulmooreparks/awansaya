@@ -39,7 +39,7 @@ Notes:
 
 Token mode is enabled by setting:
 
-- `TELA_API_TOKEN` (server-side environment variable)
+- `AWANSATU_API_TOKEN` (server-side environment variable)
 
 ## Verify portal-to-hub visibility
 

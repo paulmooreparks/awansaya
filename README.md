@@ -45,7 +45,7 @@ Common requirements:
 |----------|--------------|---------------|------|
 | **Hub** (`hub.js`) | TCP 443 (recommended) for HTTPS + WebSockets | none special | Optional: UDP 41820 for UDP relay. Must expose `/api/status` + `/api/history` for portal cards/metrics. |
 | **Portal (static site)** | TCP 80/443 to serve the portal | n/a | Browser then directly fetches each Hub’s API. |
-| **Portal server** (`server.js`) | TCP 80/443 to serve `/api/hubs` | n/a | Directory may require `Authorization: Bearer <token>` when `TELA_API_TOKEN` is set. |
+| **Portal server** (`server.js`) | TCP 80/443 to serve `/api/hubs` | n/a | Directory may require `Authorization: Bearer <token>` when `AWANSATU_API_TOKEN` is set. |
 
 See also:
 
@@ -67,7 +67,7 @@ tela logout                            # remove stored credentials
 
 ### `GET /api/hubs`
 
-Returns the hub directory. Requires `Authorization: Bearer <token>` when `TELA_API_TOKEN` is set on the server; open mode otherwise.
+Returns the hub directory. Requires `Authorization: Bearer <token>` when `AWANSATU_API_TOKEN` is set on the server; open mode otherwise.
 
 ```json
 {
@@ -76,6 +76,26 @@ Returns the hub directory. Requires `Authorization: Bearer <token>` when `TELA_A
   ]
 }
 ```
+
+## Configuration
+
+### `www/portal/config.json`
+
+The portal stores its hub directory in [www/portal/config.json](www/portal/config.json):
+
+```json
+{
+  "hubs": [
+    { "name": "owlsnest", "url": "https://tela.awansatu.net" }
+  ]
+}
+```
+
+- `name` is the short hub name users pass to `tela ... -hub <name>`.
+- `url` must be an `http(s)://...` URL that browsers can fetch (the portal UI calls each hub’s `/api/status` and `/api/history`).
+- The Tela CLI converts `https://` → `wss://` (and `http://` → `ws://`) when resolving hub names via the portal.
+
+To protect `/api/hubs`, set `AWANSATU_API_TOKEN` on the portal server and use `Authorization: Bearer <token>` from the CLI (`tela login`).
 
 ## Development
 

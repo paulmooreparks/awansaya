@@ -33,7 +33,7 @@ Deploy/restart Awan Satu.
 
 ## Step 3 — Require auth for hub directory (recommended)
 
-Set `TELA_API_TOKEN` in the Awan Satu deployment environment.
+Set `AWANSATU_API_TOKEN` in the Awan Satu deployment environment.
 
 This requires `tela` users to provide a token during `tela login`.
 

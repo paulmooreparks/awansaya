@@ -38,7 +38,7 @@ Deploy/restart Awan Satu.
 
 ## Step 3 — (Recommended) enforce auth
 
-Set `TELA_API_TOKEN` so that `/api/hubs` requires a token.
+Set `AWANSATU_API_TOKEN` so that `/api/hubs` requires a token.
 
 ---
 
