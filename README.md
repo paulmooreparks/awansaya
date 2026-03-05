@@ -30,6 +30,28 @@ flowchart TB
   HC["Hub C (cloud)"]
 ```
 
+## Networking & reachability
+
+The Portal can only show hubs that the user’s browser can reach.
+
+At a minimum:
+
+- Each **Hub** must be reachable from the user’s browser over **HTTPS/WebSockets**.
+- Each Hub must allow cross-origin reads of its status endpoints (`/api/status` and `/api/history`). Tela’s current hub implementation sets permissive CORS headers for these endpoints.
+
+Common requirements:
+
+| Component | Needs inbound | Needs outbound | Notes |
+|----------|--------------|---------------|------|
+| **Hub** (`hub.js`) | TCP 443 (recommended) for HTTPS + WebSockets | none special | Optional: UDP 41820 for UDP relay. Must expose `/api/status` + `/api/history` for portal cards/metrics. |
+| **Portal (static site)** | TCP 80/443 to serve the portal | n/a | Browser then directly fetches each Hub’s API. |
+| **Portal server** (`server.js`) | TCP 80/443 to serve `/api/hubs` | n/a | Directory may require `Authorization: Bearer <token>` when `TELA_API_TOKEN` is set. |
+
+See also:
+
+- `howto/networking.md`
+- `howto/portal.md`
+
 ## CLI Integration
 
 The Tela CLI resolves short hub names via the portal:
