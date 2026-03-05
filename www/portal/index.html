@@ -138,6 +138,7 @@
     .history-hub { color: #555; min-width: 80px; font-size: 0.8rem; }
     .history-machine { font-weight: 600; color: #2d7d46; min-width: 80px; }
     .history-event { color: #555; }
+    .history-detail { color: #888; }
 
     .no-data { color: #999; font-style: italic; padding: 12px 0; }
     .last-updated { color: #aaa; font-size: 0.8rem; margin-top: 8px; }
@@ -319,10 +320,18 @@
 
     var EVENT_LABELS = {
       'session-start': '\uD83D\uDD17 Session started',
-      'agent-register': '\u2705 Agent registered',
-      'agent-disconnect': '\u274C Agent disconnected',
-      'helper-disconnect': '\uD83D\uDD0C Client disconnected',
+      'agent-register': '\u2705 Machine registered',
+      'agent-disconnect': '\u274C Machine disconnected',
+      'client-disconnect': '\uD83D\uDD0C Session ended',
+      'helper-disconnect': '\uD83D\uDD0C Session ended',
     };
+
+    function formatEventDetail(ev) {
+      if (!ev || !ev.detail) return '';
+      var d = String(ev.detail);
+      if (d.indexOf('services=') === 0) return d.slice('services='.length);
+      return d;
+    }
 
     // ── Fetch status + history from all hubs ────────────────────────
     function fetchAllHubs() {
@@ -486,11 +495,12 @@
         var hHtml = '<ul class="history-list">';
         items.forEach(function (ev) {
           var label = EVENT_LABELS[ev.event] || ev.event;
+          var detail = formatEventDetail(ev);
           hHtml += '<li>'
             + '<span class="history-time">' + timeAgo(ev.timestamp) + '</span>'
             + '<span class="history-hub">' + escHtml(ev._hub) + '</span>'
             + '<span class="history-machine">' + escHtml(ev.machineId) + '</span>'
-            + '<span class="history-event">' + label + '</span>'
+            + '<span class="history-event">' + label + (detail ? ' <span class="history-detail">(' + escHtml(detail) + ')</span>' : '') + '</span>'
             + '</li>';
         });
         hHtml += '</ul>';
