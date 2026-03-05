@@ -1,5 +1,5 @@
 {
   "hubs": [
-    { "name": "gohub", "url": "https://gohub.parkscomputing.com" }
+    { "name": "gohub", "url": "https://gohub.parkscomputing.com", "viewerToken": "66271f2156ef55295ca612a9d32ed576efadd5583d113981e4b672f842b36512" }
   ]
 }

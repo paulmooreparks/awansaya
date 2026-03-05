@@ -112,7 +112,8 @@
       font-size: 0.85rem; font-family: inherit;
     }
     .add-hub-form input[name="name"] { width: 140px; }
-    .add-hub-form input[name="url"] { width: 300px; }
+    .add-hub-form input[name="url"] { width: 260px; }
+    .add-hub-form input[name="viewerToken"] { width: 260px; }
     .add-hub-form button {
       background: #5ee89e; color: #1a1a2e; border: none; padding: 6px 16px;
       border-radius: 4px; font-weight: 600; font-size: 0.85rem; cursor: pointer;
@@ -193,6 +194,7 @@
       <form class="add-hub-form" id="add-hub-form">
         <input name="name" placeholder="Hub name" required>
         <input name="url" placeholder="https://hub-address.example.com" required>
+        <input name="viewerToken" placeholder="Viewer token (optional)">
         <button type="submit">+ Add Hub</button>
       </form>
     </div>
@@ -262,13 +264,17 @@
       e.preventDefault();
       var name = this.elements.name.value.trim();
       var url = this.elements.url.value.trim().replace(/\/+$/, '');
+      var viewerToken = this.elements.viewerToken.value.trim();
       if (!name || !url) return;
+
+      var payload = { name: name, url: url };
+      if (viewerToken) payload.viewerToken = viewerToken;
 
       var form = this;
       fetch('/api/hubs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name, url: url })
+        body: JSON.stringify(payload)
       })
         .then(function (r) {
           if (r.status === 409) { alert('A hub with that name or URL already exists.'); throw new Error('dup'); }

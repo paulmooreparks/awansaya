@@ -4,10 +4,11 @@
   Serves the www/ directory on PORT (default 3000).
   Resolves directory requests to index.html.
 
-  Hubs self-register by POSTing to /api/hub-register with their viewer
-  token. The server stores viewer tokens in memory and uses them to
-  proxy /api/hub-status/<name> and /api/hub-history/<name> server-side
-  so that hub auth secrets never reach the browser.
+  Hubs are registered via POST /api/hubs with a name, URL, and viewer
+  token.  The viewer token is stored in config.json but never exposed
+  to the browser.  Server-side proxy endpoints /api/hub-status/<name>
+  and /api/hub-history/<name> use the stored token to fetch data from
+  each hub so auth secrets stay on the server.
 */
 const http  = require('http');
 const https = require('https');
@@ -19,11 +20,6 @@ const PORT          = parseInt(process.env.PORT || '3000', 10);
 const WWW_DIR       = path.join(__dirname, 'www');
 const API_TOKEN     = process.env.AWANSATU_API_TOKEN || '';   // empty = open mode
 const CONFIG_PATH   = path.join(WWW_DIR, 'portal', 'config.json');
-
-// ── In-memory hub registry (viewer tokens from self-registration) ──
-
-// Map of hub name → { url, viewerToken, lastHeartbeat }
-const hubRegistry = new Map();
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -83,35 +79,42 @@ function readBody(req, cb) {
   });
 }
 
-// GET /api/hubs — return the hub list from portal/config.json
+// GET /api/hubs — return the hub list from portal/config.json (tokens stripped)
 function apiGetHubs(req, res) {
   if (!checkAuth(req, res)) return;
   readConfig((err, cfg) => {
     if (err) return jsonError(res, 500, 'config not found');
-    jsonOK(res, { hubs: cfg.hubs || [] });
+    // Strip viewerToken so it never reaches the browser
+    const hubs = (cfg.hubs || []).map(h => ({ name: h.name, url: h.url }));
+    jsonOK(res, { hubs });
   });
 }
 
-// POST /api/hubs — add a hub { name, url }
+// POST /api/hubs — add a hub { name, url, viewerToken }
 function apiAddHub(req, res) {
   if (!checkAuth(req, res)) return;
   readBody(req, (err, body) => {
     if (err || !body) return jsonError(res, 400, 'invalid JSON body');
-    const name = (body.name || '').trim();
-    const url  = (body.url  || '').trim().replace(/\/+$/, '');
-    if (!name || !url) return jsonError(res, 400, 'name and url are required');
+    const name        = (body.name || '').trim();
+    const hubUrl      = (body.url  || '').trim().replace(/\/+$/, '');
+    const viewerToken = (body.viewerToken || '').trim();
+    if (!name || !hubUrl) return jsonError(res, 400, 'name and url are required');
 
     readConfig((err, cfg) => {
       if (err) return jsonError(res, 500, 'config not found');
       const hubs = cfg.hubs || [];
-      const dup = hubs.find(h => h.name === name || h.url === url);
+      const dup = hubs.find(h => h.name === name || h.url === hubUrl);
       if (dup) return jsonError(res, 409, 'hub with that name or URL already exists');
 
-      hubs.push({ name, url });
+      const entry = { name, url: hubUrl };
+      if (viewerToken) entry.viewerToken = viewerToken;
+      hubs.push(entry);
       cfg.hubs = hubs;
       writeConfig(cfg, (err) => {
         if (err) return jsonError(res, 500, 'failed to write config');
-        jsonOK(res, { hubs });
+        // Return list without tokens
+        const safe = hubs.map(h => ({ name: h.name, url: h.url }));
+        jsonOK(res, { hubs: safe });
       });
     });
   });
@@ -132,57 +135,24 @@ function apiDeleteHub(req, res) {
 
     hubs.splice(idx, 1);
     cfg.hubs = hubs;
-    // Also remove from in-memory registry
-    hubRegistry.delete(name);
     writeConfig(cfg, (err) => {
       if (err) return jsonError(res, 500, 'failed to write config');
-      jsonOK(res, { hubs });
-    });
-  });
-}
-
-// ── Hub self-registration ──────────────────────────────────────────
-
-// POST /api/hub-register — hub pushes { name, url, viewerToken }
-// Also used as heartbeat — hub calls periodically to stay "alive".
-function apiHubRegister(req, res) {
-  readBody(req, (err, body) => {
-    if (err || !body) return jsonError(res, 400, 'invalid JSON body');
-    const name        = (body.name || '').trim();
-    const hubUrl      = (body.url  || '').trim().replace(/\/+$/, '');
-    const viewerToken = (body.viewerToken || '').trim();
-    if (!name || !hubUrl) return jsonError(res, 400, 'name and url are required');
-
-    // Store/update in-memory registry
-    hubRegistry.set(name, {
-      url: hubUrl,
-      viewerToken: viewerToken,
-      lastHeartbeat: Date.now(),
-    });
-
-    // Ensure hub exists in config.json (so /api/hubs returns it)
-    readConfig((err, cfg) => {
-      if (err) return jsonOK(res, { status: 'registered' }); // non-fatal
-      const hubs = cfg.hubs || [];
-      const existing = hubs.find(h => h.name === name);
-      if (existing) {
-        // Update URL if changed
-        if (existing.url !== hubUrl) {
-          existing.url = hubUrl;
-          cfg.hubs = hubs;
-          writeConfig(cfg, () => {});
-        }
-      } else {
-        hubs.push({ name, url: hubUrl });
-        cfg.hubs = hubs;
-        writeConfig(cfg, () => {});
-      }
-      jsonOK(res, { status: 'registered' });
+      const safe = hubs.map(h => ({ name: h.name, url: h.url }));
+      jsonOK(res, { hubs: safe });
     });
   });
 }
 
 // ── Server-side hub status/history proxy ────────────────────────────
+
+// Looks up a hub by name in config.json and returns { url, viewerToken }.
+function lookupHub(hubName, cb) {
+  readConfig((err, cfg) => {
+    if (err) return cb(null);
+    const hub = (cfg.hubs || []).find(h => h.name === hubName);
+    cb(hub || null);
+  });
+}
 
 // Fetches a URL using the correct http/https module, returns a Promise<string>.
 function proxyFetch(targetUrl) {
@@ -200,38 +170,40 @@ function proxyFetch(targetUrl) {
 
 // GET /api/hub-status/<name> — proxy to hub's /api/status with viewer token
 function apiHubStatus(req, res, hubName) {
-  const reg = hubRegistry.get(hubName);
-  if (!reg) return jsonError(res, 404, 'hub not registered or no viewer token');
+  lookupHub(hubName, (hub) => {
+    if (!hub) return jsonError(res, 404, 'hub not found');
 
-  let targetUrl = reg.url + '/api/status';
-  if (reg.viewerToken) targetUrl += '?token=' + encodeURIComponent(reg.viewerToken);
+    let targetUrl = hub.url + '/api/status';
+    if (hub.viewerToken) targetUrl += '?token=' + encodeURIComponent(hub.viewerToken);
 
-  proxyFetch(targetUrl)
-    .then(result => {
-      res.writeHead(result.status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
-      res.end(result.body);
-    })
-    .catch(err => {
-      jsonError(res, 502, 'hub unreachable: ' + err.message);
-    });
+    proxyFetch(targetUrl)
+      .then(result => {
+        res.writeHead(result.status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+        res.end(result.body);
+      })
+      .catch(err => {
+        jsonError(res, 502, 'hub unreachable: ' + err.message);
+      });
+  });
 }
 
 // GET /api/hub-history/<name> — proxy to hub's /api/history with viewer token
 function apiHubHistory(req, res, hubName) {
-  const reg = hubRegistry.get(hubName);
-  if (!reg) return jsonError(res, 404, 'hub not registered or no viewer token');
+  lookupHub(hubName, (hub) => {
+    if (!hub) return jsonError(res, 404, 'hub not found');
 
-  let targetUrl = reg.url + '/api/history';
-  if (reg.viewerToken) targetUrl += '?token=' + encodeURIComponent(reg.viewerToken);
+    let targetUrl = hub.url + '/api/history';
+    if (hub.viewerToken) targetUrl += '?token=' + encodeURIComponent(hub.viewerToken);
 
-  proxyFetch(targetUrl)
-    .then(result => {
-      res.writeHead(result.status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
-      res.end(result.body);
-    })
-    .catch(err => {
-      jsonError(res, 502, 'hub unreachable: ' + err.message);
-    });
+    proxyFetch(targetUrl)
+      .then(result => {
+        res.writeHead(result.status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+        res.end(result.body);
+      })
+      .catch(err => {
+        jsonError(res, 502, 'hub unreachable: ' + err.message);
+      });
+  });
 }
 
 // ── Request router ─────────────────────────────────────────────────
@@ -246,10 +218,6 @@ function serve(req, res) {
     if (method === 'POST')   return apiAddHub(req, res);
     if (method === 'DELETE') return apiDeleteHub(req, res);
     res.writeHead(405); res.end(); return;
-  }
-
-  if (urlPath === '/api/hub-register' && method === 'POST') {
-    return apiHubRegister(req, res);
   }
 
   // /api/hub-status/<name> and /api/hub-history/<name>
