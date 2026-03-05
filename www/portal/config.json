@@ -1,6 +1,5 @@
 {
   "hubs": [
-    { "name": "owlsnest", "url": "https://owlsnest-hub.parkscomputing.com" },
     { "name": "gohub", "url": "https://gohub.parkscomputing.com" }
   ]
 }
