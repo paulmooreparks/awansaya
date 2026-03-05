@@ -1,17 +1,29 @@
 /*
-  Awan Satu — Static file server
+  Awan Satu — Hub directory & portal server
 
   Serves the www/ directory on PORT (default 3000).
   Resolves directory requests to index.html.
+
+  Hubs self-register by POSTing to /api/hub-register with their viewer
+  token. The server stores viewer tokens in memory and uses them to
+  proxy /api/hub-status/<name> and /api/hub-history/<name> server-side
+  so that hub auth secrets never reach the browser.
 */
-const http = require('http');
-const fs   = require('fs');
-const path = require('path');
+const http  = require('http');
+const https = require('https');
+const fs    = require('fs');
+const path  = require('path');
+const url   = require('url');
 
 const PORT          = parseInt(process.env.PORT || '3000', 10);
 const WWW_DIR       = path.join(__dirname, 'www');
 const API_TOKEN     = process.env.AWANSATU_API_TOKEN || '';   // empty = open mode
 const CONFIG_PATH   = path.join(WWW_DIR, 'portal', 'config.json');
+
+// ── In-memory hub registry (viewer tokens from self-registration) ──
+
+// Map of hub name → { url, viewerToken, lastHeartbeat }
+const hubRegistry = new Map();
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -108,8 +120,8 @@ function apiAddHub(req, res) {
 // DELETE /api/hubs?name=<name> — remove a hub by name
 function apiDeleteHub(req, res) {
   if (!checkAuth(req, res)) return;
-  const url = new URL(req.url, 'http://localhost');
-  const name = (url.searchParams.get('name') || '').trim();
+  const u = new URL(req.url, 'http://localhost');
+  const name = (u.searchParams.get('name') || '').trim();
   if (!name) return jsonError(res, 400, 'name query parameter is required');
 
   readConfig((err, cfg) => {
@@ -120,11 +132,106 @@ function apiDeleteHub(req, res) {
 
     hubs.splice(idx, 1);
     cfg.hubs = hubs;
+    // Also remove from in-memory registry
+    hubRegistry.delete(name);
     writeConfig(cfg, (err) => {
       if (err) return jsonError(res, 500, 'failed to write config');
       jsonOK(res, { hubs });
     });
   });
+}
+
+// ── Hub self-registration ──────────────────────────────────────────
+
+// POST /api/hub-register — hub pushes { name, url, viewerToken }
+// Also used as heartbeat — hub calls periodically to stay "alive".
+function apiHubRegister(req, res) {
+  readBody(req, (err, body) => {
+    if (err || !body) return jsonError(res, 400, 'invalid JSON body');
+    const name        = (body.name || '').trim();
+    const hubUrl      = (body.url  || '').trim().replace(/\/+$/, '');
+    const viewerToken = (body.viewerToken || '').trim();
+    if (!name || !hubUrl) return jsonError(res, 400, 'name and url are required');
+
+    // Store/update in-memory registry
+    hubRegistry.set(name, {
+      url: hubUrl,
+      viewerToken: viewerToken,
+      lastHeartbeat: Date.now(),
+    });
+
+    // Ensure hub exists in config.json (so /api/hubs returns it)
+    readConfig((err, cfg) => {
+      if (err) return jsonOK(res, { status: 'registered' }); // non-fatal
+      const hubs = cfg.hubs || [];
+      const existing = hubs.find(h => h.name === name);
+      if (existing) {
+        // Update URL if changed
+        if (existing.url !== hubUrl) {
+          existing.url = hubUrl;
+          cfg.hubs = hubs;
+          writeConfig(cfg, () => {});
+        }
+      } else {
+        hubs.push({ name, url: hubUrl });
+        cfg.hubs = hubs;
+        writeConfig(cfg, () => {});
+      }
+      jsonOK(res, { status: 'registered' });
+    });
+  });
+}
+
+// ── Server-side hub status/history proxy ────────────────────────────
+
+// Fetches a URL using the correct http/https module, returns a Promise<string>.
+function proxyFetch(targetUrl) {
+  return new Promise((resolve, reject) => {
+    const mod = targetUrl.startsWith('https') ? https : http;
+    const req = mod.get(targetUrl, { timeout: 5000 }, (res) => {
+      let data = '';
+      res.on('data', chunk => { data += chunk; });
+      res.on('end', () => resolve({ status: res.statusCode, body: data }));
+    });
+    req.on('error', reject);
+    req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
+  });
+}
+
+// GET /api/hub-status/<name> — proxy to hub's /api/status with viewer token
+function apiHubStatus(req, res, hubName) {
+  const reg = hubRegistry.get(hubName);
+  if (!reg) return jsonError(res, 404, 'hub not registered or no viewer token');
+
+  let targetUrl = reg.url + '/api/status';
+  if (reg.viewerToken) targetUrl += '?token=' + encodeURIComponent(reg.viewerToken);
+
+  proxyFetch(targetUrl)
+    .then(result => {
+      res.writeHead(result.status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+      res.end(result.body);
+    })
+    .catch(err => {
+      jsonError(res, 502, 'hub unreachable: ' + err.message);
+    });
+}
+
+// GET /api/hub-history/<name> — proxy to hub's /api/history with viewer token
+function apiHubHistory(req, res, hubName) {
+  const reg = hubRegistry.get(hubName);
+  if (!reg) return jsonError(res, 404, 'hub not registered or no viewer token');
+
+  let targetUrl = reg.url + '/api/history';
+  if (reg.viewerToken) targetUrl += '?token=' + encodeURIComponent(reg.viewerToken);
+
+  proxyFetch(targetUrl)
+    .then(result => {
+      res.writeHead(result.status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+      res.end(result.body);
+    })
+    .catch(err => {
+      jsonError(res, 502, 'hub unreachable: ' + err.message);
+    });
 }
 
 // ── Request router ─────────────────────────────────────────────────
@@ -139,6 +246,20 @@ function serve(req, res) {
     if (method === 'POST')   return apiAddHub(req, res);
     if (method === 'DELETE') return apiDeleteHub(req, res);
     res.writeHead(405); res.end(); return;
+  }
+
+  if (urlPath === '/api/hub-register' && method === 'POST') {
+    return apiHubRegister(req, res);
+  }
+
+  // /api/hub-status/<name> and /api/hub-history/<name>
+  const statusMatch = urlPath.match(/^\/api\/hub-status\/(.+)$/);
+  if (statusMatch && (method === 'GET' || method === 'HEAD')) {
+    return apiHubStatus(req, res, decodeURIComponent(statusMatch[1]));
+  }
+  const historyMatch = urlPath.match(/^\/api\/hub-history\/(.+)$/);
+  if (historyMatch && (method === 'GET' || method === 'HEAD')) {
+    return apiHubHistory(req, res, decodeURIComponent(historyMatch[1]));
   }
 
   if (method !== 'GET' && method !== 'HEAD') {

@@ -333,13 +333,13 @@
       return d;
     }
 
-    // ── Fetch status + history from all hubs ────────────────────────
+    // ── Fetch status + history from all hubs (via server-side proxy) ──
     function fetchAllHubs() {
       return Promise.all(HUBS.map(function (hub) {
-        var statusP = fetch(hub.url + '/api/status')
+        var statusP = fetch('/api/hub-status/' + encodeURIComponent(hub.name))
           .then(function (r) { return r.json(); })
           .catch(function () { return { machines: [] }; });
-        var historyP = fetch(hub.url + '/api/history')
+        var historyP = fetch('/api/hub-history/' + encodeURIComponent(hub.name))
           .then(function (r) { return r.json(); })
           .catch(function () { return { events: [] }; });
         return Promise.all([statusP, historyP]).then(function (results) {
