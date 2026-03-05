@@ -47,6 +47,14 @@ Awan Satu doesn’t require one pattern or the other. It helps teams manage hubs
 
 **Scenario:** You have machines at home (NAS, media server, dev workstation) and want to reach them from anywhere, including locked-down corporate laptops.
 
+**How-to (at a glance):**
+
+- Publish a hub URL (your hub console/API must be reachable).
+- Add the hub to Awan Satu’s hub directory.
+- On any client machine: download `tela`, run `tela login https://awansatu.net`, then `tela connect -hub <hubName> -machine <machine>`.
+
+Detailed HOWTO: `howto/personal-cloud.md`
+
 **With Tela + Awan Satu:**
 
 - `telad` on your home machines, outbound to your hub. No port forwarding, no dynamic DNS.
@@ -67,6 +75,15 @@ Awan Satu doesn’t require one pattern or the other. It helps teams manage hubs
 ### 2. Distributed Development Teams
 
 **Scenario:** Developers across offices and remote locations need access to shared dev/staging machines (databases, test servers, CI runners).
+
+**How-to (at a glance):**
+
+- Run one hub per environment or site.
+- Add all hubs to Awan Satu.
+- Onboard users via one portal login; connect by hub name.
+- Choose endpoint-agent vs gateway/bridge per environment constraints.
+
+Detailed HOWTO: `howto/distributed-teams.md`
 
 **With Tela + Awan Satu:**
 
@@ -92,6 +109,15 @@ Awan Satu doesn’t require one pattern or the other. It helps teams manage hubs
 
 **Scenario:** Deploy devices (Raspberry Pi, controllers, kiosks) on customer sites behind NATs and firewalls you don't control. SSH in for maintenance.
 
+**How-to (at a glance):**
+
+- Deploy a hub per customer/site (or per fleet segment).
+- Add hubs to Awan Satu so techs can discover them by name.
+- Deploy `telad` on devices (or deploy a site gateway `telad`).
+- Techs use `tela login` once, then connect by hub name.
+
+Detailed HOWTO: `howto/iot-edge.md`
+
 **With Tela + Awan Satu:**
 
 - `telad` on each device, outbound to a per-customer hub.
@@ -113,6 +139,15 @@ Awan Satu doesn’t require one pattern or the other. It helps teams manage hubs
 ### 4. Production Service Access (Bastion Replacement)
 
 **Scenario:** A small team runs production services on cloud VMs. Today they SSH through bastion hosts.
+
+**How-to (at a glance):**
+
+- Prefer endpoint-agent `telad` on each production VM.
+- Add the production hub(s) to Awan Satu.
+- Enforce auth (token now; SSO/RBAC later).
+- Operators connect by hub name; rotate access centrally.
+
+Detailed HOWTO: `howto/production-access.md`
 
 **With Tela + Awan Satu:**
 
@@ -137,6 +172,15 @@ Awan Satu doesn’t require one pattern or the other. It helps teams manage hubs
 
 **Scenario:** A managed service provider supports dozens of small businesses, each with a few machines.
 
+**How-to (at a glance):**
+
+- Create one hub per customer (recommended isolation).
+- Add all customer hubs to Awan Satu.
+- Onboard techs via portal login; connect by hub name.
+- Use gateway/bridge when endpoints can’t run agents.
+
+Detailed HOWTO: `howto/msp-it-support.md`
+
 **With Tela + Awan Satu:**
 
 - `telad` on each customer's machines. Each customer can have their own hub.
@@ -159,6 +203,14 @@ Awan Satu doesn’t require one pattern or the other. It helps teams manage hubs
 ### 6. Education / Lab Environments
 
 **Scenario:** A university runs a computer lab. Students access lab machines remotely.
+
+**How-to (at a glance):**
+
+- Run a hub per lab/course and register lab machines.
+- Add hubs to Awan Satu so students can discover them by name.
+- Students `tela login` and connect to assigned machines.
+
+Detailed HOWTO: `howto/education-labs.md`
 
 **With Tela + Awan Satu:**
 
