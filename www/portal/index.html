@@ -232,38 +232,26 @@
 
   <script>
     // ── Hub registry ────────────────────────────────────────────────
-    // Hubs are stored in localStorage. On first visit (or when localStorage
-    // is empty), defaults are loaded from /portal/config.json.
-    var STORAGE_KEY = 'awansatu-hubs';
+    // Hub list is stored server-side in config.json, accessed via /api/hubs.
+    // Add and remove operations go through POST/DELETE /api/hubs.
 
-    function loadHubsFromStorage() {
-      try {
-        var stored = JSON.parse(localStorage.getItem(STORAGE_KEY));
-        if (Array.isArray(stored) && stored.length > 0) return stored;
-      } catch (e) {}
-      return null;
-    }
+    var HUBS = [];
 
-    function saveHubs(hubs) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(hubs));
-    }
-
-    var HUBS = loadHubsFromStorage();
-
-    function boot() {
-      if (HUBS) { initDashboard(); return; }
-      // First visit — fetch defaults from config.json
-      fetch('config.json')
+    function fetchHubList() {
+      return fetch('/api/hubs')
         .then(function (r) { return r.json(); })
-        .then(function (cfg) {
-          HUBS = (cfg && Array.isArray(cfg.hubs)) ? cfg.hubs : [];
-          saveHubs(HUBS);
-          initDashboard();
+        .then(function (data) {
+          HUBS = (data && Array.isArray(data.hubs)) ? data.hubs : [];
+          return HUBS;
         })
         .catch(function () {
-          HUBS = [];
-          initDashboard();
+          // Offline fallback — keep whatever HUBS we had
+          return HUBS;
         });
+    }
+
+    function boot() {
+      fetchHubList().then(function () { initDashboard(); });
     }
 
     function initDashboard() {
@@ -275,25 +263,42 @@
       var url = this.elements.url.value.trim().replace(/\/+$/, '');
       if (!name || !url) return;
 
-      // Prevent duplicates
-      for (var i = 0; i < HUBS.length; i++) {
-        if (HUBS[i].url === url || HUBS[i].name === name) {
-          alert('A hub with that name or URL already exists.');
-          return;
-        }
-      }
-
-      HUBS.push({ name: name, url: url });
-      saveHubs(HUBS);
-      this.reset();
-      poll();
+      var form = this;
+      fetch('/api/hubs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name, url: url })
+      })
+        .then(function (r) {
+          if (r.status === 409) { alert('A hub with that name or URL already exists.'); throw new Error('dup'); }
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.json();
+        })
+        .then(function (data) {
+          HUBS = data.hubs || HUBS;
+          form.reset();
+          poll();
+        })
+        .catch(function (err) {
+          if (err.message !== 'dup') alert('Failed to add hub: ' + err.message);
+        });
     });
 
     function removeHub(index) {
       if (!confirm('Remove hub "' + HUBS[index].name + '"?')) return;
-      HUBS.splice(index, 1);
-      saveHubs(HUBS);
-      poll();
+      var name = HUBS[index].name;
+      fetch('/api/hubs?name=' + encodeURIComponent(name), { method: 'DELETE' })
+        .then(function (r) {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.json();
+        })
+        .then(function (data) {
+          HUBS = data.hubs || HUBS;
+          poll();
+        })
+        .catch(function (err) {
+          alert('Failed to remove hub: ' + err.message);
+        });
     }
 
     // ── Helpers ─────────────────────────────────────────────────────
@@ -497,8 +502,9 @@
 
     // ── Poll loop ───────────────────────────────────────────────────
     function poll() {
-      HUBS = loadHubsFromStorage() || HUBS;
-      fetchAllHubs().then(render);
+      fetchHubList().then(function () {
+        fetchAllHubs().then(render);
+      });
     }
 
     poll();

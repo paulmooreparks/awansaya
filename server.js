@@ -37,26 +37,93 @@ function checkAuth(req, res) {
   return false;
 }
 
-// GET /api/hubs — return the hub list from portal/config.json
-function apiHubs(req, res) {
-  if (!checkAuth(req, res)) return;
+// ── Helpers for config.json I/O ─────────────────────────────────
+
+function readConfig(cb) {
   fs.readFile(CONFIG_PATH, 'utf8', (err, raw) => {
-    if (err) {
-      res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'config not found' }));
-      return;
-    }
-    try {
-      const cfg = JSON.parse(raw);
-      res.writeHead(200, {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache',
+    if (err) return cb(err, null);
+    try { cb(null, JSON.parse(raw)); }
+    catch (e) { cb(e, null); }
+  });
+}
+
+function writeConfig(cfg, cb) {
+  const json = JSON.stringify(cfg, null, 2) + '\n';
+  fs.writeFile(CONFIG_PATH, json, 'utf8', cb);
+}
+
+function jsonError(res, status, msg) {
+  res.writeHead(status, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({ error: msg }));
+}
+
+function jsonOK(res, obj) {
+  res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+  res.end(JSON.stringify(obj));
+}
+
+function readBody(req, cb) {
+  let body = '';
+  req.on('data', chunk => { body += chunk; if (body.length > 1e6) req.destroy(); });
+  req.on('end', () => {
+    try { cb(null, JSON.parse(body)); }
+    catch (e) { cb(e, null); }
+  });
+}
+
+// GET /api/hubs — return the hub list from portal/config.json
+function apiGetHubs(req, res) {
+  if (!checkAuth(req, res)) return;
+  readConfig((err, cfg) => {
+    if (err) return jsonError(res, 500, 'config not found');
+    jsonOK(res, { hubs: cfg.hubs || [] });
+  });
+}
+
+// POST /api/hubs — add a hub { name, url }
+function apiAddHub(req, res) {
+  if (!checkAuth(req, res)) return;
+  readBody(req, (err, body) => {
+    if (err || !body) return jsonError(res, 400, 'invalid JSON body');
+    const name = (body.name || '').trim();
+    const url  = (body.url  || '').trim().replace(/\/+$/, '');
+    if (!name || !url) return jsonError(res, 400, 'name and url are required');
+
+    readConfig((err, cfg) => {
+      if (err) return jsonError(res, 500, 'config not found');
+      const hubs = cfg.hubs || [];
+      const dup = hubs.find(h => h.name === name || h.url === url);
+      if (dup) return jsonError(res, 409, 'hub with that name or URL already exists');
+
+      hubs.push({ name, url });
+      cfg.hubs = hubs;
+      writeConfig(cfg, (err) => {
+        if (err) return jsonError(res, 500, 'failed to write config');
+        jsonOK(res, { hubs });
       });
-      res.end(JSON.stringify({ hubs: cfg.hubs || [] }));
-    } catch (e) {
-      res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'invalid config' }));
-    }
+    });
+  });
+}
+
+// DELETE /api/hubs?name=<name> — remove a hub by name
+function apiDeleteHub(req, res) {
+  if (!checkAuth(req, res)) return;
+  const url = new URL(req.url, 'http://localhost');
+  const name = (url.searchParams.get('name') || '').trim();
+  if (!name) return jsonError(res, 400, 'name query parameter is required');
+
+  readConfig((err, cfg) => {
+    if (err) return jsonError(res, 500, 'config not found');
+    const hubs = cfg.hubs || [];
+    const idx = hubs.findIndex(h => h.name === name);
+    if (idx === -1) return jsonError(res, 404, 'hub not found');
+
+    hubs.splice(idx, 1);
+    cfg.hubs = hubs;
+    writeConfig(cfg, (err) => {
+      if (err) return jsonError(res, 500, 'failed to write config');
+      jsonOK(res, { hubs });
+    });
   });
 }
 
@@ -67,8 +134,11 @@ function serve(req, res) {
   const urlPath = decodeURIComponent(req.url.split('?')[0]);
 
   // API routes
-  if (urlPath === '/api/hubs' && (method === 'GET' || method === 'HEAD')) {
-    return apiHubs(req, res);
+  if (urlPath === '/api/hubs') {
+    if (method === 'GET' || method === 'HEAD') return apiGetHubs(req, res);
+    if (method === 'POST')   return apiAddHub(req, res);
+    if (method === 'DELETE') return apiDeleteHub(req, res);
+    res.writeHead(405); res.end(); return;
   }
 
   if (method !== 'GET' && method !== 'HEAD') {

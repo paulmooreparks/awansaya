@@ -241,8 +241,17 @@
       <ol class="steps">
         <li>
           <div>
+            <strong>Deploy a hub (relay) and register it</strong>
+            <span class="desc"><a href="#download" style="color:#5ee89e;">Download <code>telahubd</code></a> and run it on a machine reachable by your agents and clients&mdash;a VPS, cloud VM, or an edge box on your network.
+            A single command starts the hub:<br>
+            <code style="display:inline-block;margin:6px 0;background:rgba(0,0,0,0.2);padding:4px 10px;border-radius:4px;">telahubd</code><br>
+            By default it listens on port 8080 (HTTP+WS) and 41820 (UDP relay). Set <code>HUB_NAME</code> for the portal display name. Then add it to the <a href="/portal/" style="color:#5ee89e;">Awan Satu portal</a> with a short name and URL.</span>
+          </div>
+        </li>
+        <li>
+          <div>
             <strong>Install the agent on each machine</strong>
-            <span class="desc"><a href="#download" style="color:#5ee89e;">Download <code>telad</code></a> and run it on every machine you want to access remotely. It connects to your hub (a lightweight relay server) and advertises the machine&rsquo;s services&mdash;SSH, RDP, HTTP, or any TCP port.</span>
+            <span class="desc"><a href="#download" style="color:#5ee89e;">Download <code>telad</code></a> and run it on every machine you want to access remotely. It connects to your hub and advertises the machine&rsquo;s services&mdash;SSH, RDP, HTTP, or any TCP port.</span>
           </div>
         </li>
         <li>
@@ -348,6 +357,31 @@ graph LR
         <div class="dl-icon">&#x1F34E;</div>
         <div class="dl-label">macOS (Apple Silicon)</div>
         <div class="dl-binary">telad-darwin-arm64</div>
+      </a>
+    </div>
+
+    <h2 style="margin-top:48px;">Download Telahubd Hub Server</h2>
+    <p class="download-sub">Run your own hub. Single binary relay + console server&mdash;no Node.js or runtime dependencies.</p>
+    <div class="download-grid">
+      <a class="dl-card" href="#" data-asset="telahubd-windows-amd64.exe">
+        <div class="dl-icon">&#x1F5A5;&#xFE0F;</div>
+        <div class="dl-label">Windows</div>
+        <div class="dl-binary">telahubd-windows-amd64.exe</div>
+      </a>
+      <a class="dl-card" href="#" data-asset="telahubd-linux-amd64">
+        <div class="dl-icon">&#x1F427;</div>
+        <div class="dl-label">Linux</div>
+        <div class="dl-binary">telahubd-linux-amd64</div>
+      </a>
+      <a class="dl-card" href="#" data-asset="telahubd-darwin-amd64">
+        <div class="dl-icon">&#x1F34E;</div>
+        <div class="dl-label">macOS (Intel)</div>
+        <div class="dl-binary">telahubd-darwin-amd64</div>
+      </a>
+      <a class="dl-card" href="#" data-asset="telahubd-darwin-arm64">
+        <div class="dl-icon">&#x1F34E;</div>
+        <div class="dl-label">macOS (Apple Silicon)</div>
+        <div class="dl-binary">telahubd-darwin-arm64</div>
       </a>
     </div>
     <p class="verify-note">Binaries are built by <a href="https://github.com/paulmooreparks/tela/actions">GitHub Actions</a> from <a href="https://github.com/paulmooreparks/tela">public source</a>. Verify with <code>sha256sum</code> or <code>Get-FileHash</code>.</p>
