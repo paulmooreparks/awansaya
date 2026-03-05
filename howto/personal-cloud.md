@@ -16,7 +16,7 @@ It assumes:
 ## What Awan Satu is doing (today)
 
 - Awan Satu maintains a hub directory (currently configured via `www/portal/config.json`).
-- The portal UI fetches each hub’s `/api/status` and `/api/history` directly.
+- The portal server proxies each hub's `/api/status` and `/api/history` on behalf of the browser, using a stored viewer token per hub.
 - The `tela` CLI can resolve hub names via Awan Satu’s `/api/hubs` endpoint after `tela login`.
 
 ---
@@ -45,10 +45,12 @@ Add an entry:
 ```json
 {
   "hubs": [
-    { "name": "owlsnest", "url": "https://owlsnest-hub.example.com" }
+    { "name": "owlsnest", "url": "https://owlsnest-hub.example.com", "viewerToken": "<hub-viewer-token>" }
   ]
 }
 ```
+
+The `viewerToken` is a Tela hub token with the `viewer` role. The portal server uses it to proxy hub status; it is never exposed to the browser.
 
 Deploy/restart Awan Satu.
 
@@ -126,6 +128,6 @@ tela connect -hub owlsnest -machine barn
 
 ### Hub appears in Awan Satu but status is failing
 
-- Confirm hub `/api/status` is reachable from your browser.
+- Confirm hub `/api/status` is reachable from the portal server.
+- Confirm the viewer token in `config.json` is valid.
 - Confirm HTTPS and certificate are valid.
-- Confirm mixed-content is not blocked (portal is HTTPS; hubs should also be HTTPS).

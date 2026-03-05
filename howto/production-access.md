@@ -22,7 +22,7 @@ Update [awansatu/www/portal/config.json](../www/portal/config.json):
 ```json
 {
   "hubs": [
-    { "name": "prod-us-east", "url": "https://prod-us-east-hub.example.com" }
+    { "name": "prod-us-east", "url": "https://prod-us-east-hub.example.com", "viewerToken": "<hub-viewer-token>" }
   ]
 }
 ```

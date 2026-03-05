@@ -35,8 +35,8 @@ Update [awansatu/www/portal/config.json](../www/portal/config.json):
 ```json
 {
   "hubs": [
-    { "name": "cust-acme", "url": "https://acme-hub.example.com" },
-    { "name": "cust-zen", "url": "https://zen-hub.example.com" }
+    { "name": "cust-acme", "url": "https://acme-hub.example.com", "viewerToken": "<hub-viewer-token>" },
+    { "name": "cust-zen", "url": "https://zen-hub.example.com", "viewerToken": "<hub-viewer-token>" }
   ]
 }
 ```

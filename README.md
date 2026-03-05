@@ -17,12 +17,14 @@ flowchart TB
   subgraph "awansatu.net"
     LP[Landing Page]
     PD[Portal Dashboard]
+    SRV[server.js]
     API["/api/hubs"]
   end
 
-  PD -->|"fetches /api/status, /api/history"| HA
-  PD -->|"fetches /api/status, /api/history"| HB
-  PD -->|"fetches /api/status, /api/history"| HC
+  PD -->|browser fetches| SRV
+  SRV -->|"server-side proxy\n/api/hub-status/<name>"| HA
+  SRV -->|"server-side proxy\n/api/hub-status/<name>"| HB
+  SRV -->|"server-side proxy\n/api/hub-status/<name>"| HC
   API -.->|"hub name → URL"| CLI["tela CLI"]
 
   HA["Hub A (home)"]
@@ -67,7 +69,7 @@ tela logout                            # remove stored credentials
 
 ### `GET /api/hubs`
 
-Returns the hub directory. Requires `Authorization: Bearer <token>` when `AWANSATU_API_TOKEN` is set on the server; open mode otherwise.
+Returns the hub directory (viewer tokens are stripped from the response). Requires `Authorization: Bearer <token>` when `AWANSATU_API_TOKEN` is set on the server; open mode otherwise.
 
 ```json
 {
@@ -76,6 +78,26 @@ Returns the hub directory. Requires `Authorization: Bearer <token>` when `AWANSA
   ]
 }
 ```
+
+### `POST /api/hubs`
+
+Add a hub to the directory. Requires `Authorization: Bearer <token>` when `AWANSATU_API_TOKEN` is set.
+
+```json
+{ "name": "owlsnest", "url": "https://owlsnest-hub.parkscomputing.com", "viewerToken": "<token>" }
+```
+
+### `DELETE /api/hubs/:name`
+
+Remove a hub from the directory. Requires `Authorization: Bearer <token>` when `AWANSATU_API_TOKEN` is set.
+
+### `GET /api/hub-status/:name`
+
+Server-side proxy — fetches `/api/status` from the named hub using the stored viewer token and returns the result to the browser.
+
+### `GET /api/hub-history/:name`
+
+Server-side proxy — fetches `/api/history` from the named hub using the stored viewer token and returns the result to the browser.
 
 ## Configuration
 
@@ -86,13 +108,14 @@ The portal stores its hub directory in [www/portal/config.json](www/portal/confi
 ```json
 {
   "hubs": [
-    { "name": "owlsnest", "url": "https://tela.awansatu.net" }
+    { "name": "owlsnest", "url": "https://tela.awansatu.net", "viewerToken": "<hub-viewer-token>" }
   ]
 }
 ```
 
 - `name` is the short hub name users pass to `tela ... -hub <name>`.
-- `url` must be an `http(s)://...` URL that browsers can fetch (the portal UI calls each hub’s `/api/status` and `/api/history`).
+- `url` must be reachable from the portal **server** (the server proxies hub status; the browser never contacts hubs directly).
+- `viewerToken` is a Tela hub token with the `viewer` role. The portal server uses it to authenticate when proxying `/api/status` and `/api/history` from the hub. This token is never exposed to the browser.
 - The Tela CLI converts `https://` → `wss://` (and `http://` → `ws://`) when resolving hub names via the portal.
 
 To protect `/api/hubs`, set `AWANSATU_API_TOKEN` on the portal server and use `Authorization: Bearer <token>` from the CLI (`tela login`).

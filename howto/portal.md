@@ -5,7 +5,7 @@ Awan Satu serves two related things:
 - the **portal UI** (multi-hub dashboard)
 - the **hub directory API** (`GET /api/hubs`) used by the Tela CLI for hub name resolution
 
-Important detail: the portal UI runs in the **browser** and fetches hub status directly from each hub. Awan Satu does not proxy hub status on behalf of the browser.
+The portal server proxies hub status on behalf of the browser. The browser never contacts hubs directly — no CORS headers or browser-to-hub connectivity are required.
 
 ## Add / remove hubs
 
@@ -43,11 +43,16 @@ Token mode is enabled by setting:
 
 ## Verify portal-to-hub visibility
 
-For each hub URL in the directory:
+The portal server proxies hub status. For each hub in the directory, verify that the server can reach the hub:
 
-- open `https://<hub>/api/status` in a browser
-- confirm it returns JSON and includes a permissive CORS header
+- From the portal server (or via `curl` from the server host):
+  ```bash
+  curl -H "Authorization: Bearer <viewerToken>" https://<hub>/api/status
+  ```
+- Confirm it returns JSON.
 
-If you want tighter security than permissive CORS, configure the hub to return `Access-Control-Allow-Origin` for your portal’s origin (for example, `https://awansatu.net`).
+Alternatively, check the proxy endpoint from a browser:
 
-If this doesn’t work, the hub will not be visible in the portal regardless of the Awan Satu server health.
+- `https://awansatu.net/api/hub-status/<name>`
+
+If this returns an error, the hub is unreachable from the portal server or the viewer token is invalid/missing.

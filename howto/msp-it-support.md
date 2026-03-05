@@ -26,8 +26,8 @@ Example:
 ```json
 {
   "hubs": [
-    { "name": "acme", "url": "https://acme-hub.example.com" },
-    { "name": "zen", "url": "https://zen-hub.example.com" }
+    { "name": "acme", "url": "https://acme-hub.example.com", "viewerToken": "<hub-viewer-token>" },
+    { "name": "zen", "url": "https://zen-hub.example.com", "viewerToken": "<hub-viewer-token>" }
   ]
 }
 ```

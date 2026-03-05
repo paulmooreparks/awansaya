@@ -36,9 +36,9 @@ Edit [awansatu/www/portal/config.json](../www/portal/config.json) and list all h
 ```json
 {
   "hubs": [
-    { "name": "dev", "url": "https://dev-hub.example.com" },
-    { "name": "staging", "url": "https://staging-hub.example.com" },
-    { "name": "prod", "url": "https://prod-hub.example.com" }
+    { "name": "dev", "url": "https://dev-hub.example.com", "viewerToken": "<hub-viewer-token>" },
+    { "name": "staging", "url": "https://staging-hub.example.com", "viewerToken": "<hub-viewer-token>" },
+    { "name": "prod", "url": "https://prod-hub.example.com", "viewerToken": "<hub-viewer-token>" }
   ]
 }
 ```
@@ -95,7 +95,8 @@ You should see:
 ### Hub is in config.json but doesn’t appear
 
 - Confirm Awan Satu can serve `config.json` at `/portal/config.json`.
-- Confirm the hub URL is reachable from your browser.
+- Confirm the hub URL is reachable from the portal server.
+- Confirm the viewer token in `config.json` is valid.
 
 ### Developers can’t connect by hub name
 

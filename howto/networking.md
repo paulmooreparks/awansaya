@@ -1,22 +1,16 @@
 # Networking & reachability
 
-Awan Satu’s Portal is a **multi-hub dashboard**. That means the user’s **browser** must be able to reach each hub directly.
+Awan Satu's Portal is a **multi-hub dashboard**. The portal **server** proxies hub status on behalf of the browser - the browser never contacts hubs directly.
 
 ## What must be reachable
 
 For a hub to appear healthy in the portal:
 
-- The browser must be able to fetch the hub’s public endpoints:
+- The **portal server** must be able to reach the hub's endpoints:
   - `GET https://<hub>/api/status`
   - `GET https://<hub>/api/history`
-- The hub must allow cross-origin reads of those endpoints (CORS).
-  - Product requirement: hubs must send an appropriate `Access-Control-Allow-Origin` for the portal origin.
-  - Implementation note: Tela’s current hub implementation uses permissive CORS (`Access-Control-Allow-Origin: *`) for these endpoints.
-
-Browser constraints to keep in mind:
-
-- If the portal is loaded over `https://`, the hub URLs must also be `https://` (mixed content is blocked by browsers).
-- If a hub uses a self-signed/untrusted certificate, the portal cannot reliably fetch it.
+- The hub entry in the portal must include a valid **viewer token** so the server can authenticate with the hub.
+- No CORS headers are required because the browser does not make cross-origin requests to hubs.
 
 For the Tela CLI to resolve hub names:
 
@@ -26,8 +20,8 @@ For the Tela CLI to resolve hub names:
 ## Common failure modes
 
 - Hub works for CLI but portal shows nothing:
-  - portal is running in the browser, so it depends on browser → hub reachability (not server → hub)
+  - Portal server cannot reach the hub, or viewer token is invalid/missing in `config.json`.
 - Portal lists the hub but cards stay empty:
-  - hub `/api/status` or `/api/history` not reachable, or blocked by CORS
-- CLI can’t resolve hub names:
-  - `/api/hubs` unreachable or token mismatch
+  - Hub `/api/status` or `/api/history` not reachable from the portal server, or viewer token expired/incorrect.
+- CLI can't resolve hub names:
+  - `/api/hubs` unreachable or token mismatch.
