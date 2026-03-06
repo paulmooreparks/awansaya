@@ -34,6 +34,18 @@
       padding: 4px 0; margin-right: 8px;
     }
     .topnav .signin-link:hover { color: #fff; border-bottom: 2px solid #5ee89e; }
+    .topnav .user-area {
+      display: flex; align-items: center; gap: 12px; font-size: 0.85rem; color: #aaa;
+    }
+    .topnav .user-area .avatar {
+      width: 30px; height: 30px; border-radius: 50%; background: #5ee89e; color: #1a1a2e;
+      display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem;
+    }
+    .topnav .user-area button {
+      background: transparent; color: #ddd; border: 1px solid #445; border-radius: 4px;
+      padding: 4px 10px; cursor: pointer; font-size: 0.8rem;
+    }
+    .topnav .user-area button:hover { color: #fff; border-color: #5ee89e; }
     .topnav .cta-nav { background: #5ee89e; color: #1a1a2e; padding: 6px 16px; border-radius: 4px; text-decoration: none; font-weight: 600; font-size: 0.85rem; }
     .topnav .cta-nav:hover { background: #4dd889; }
     .hidden { display: none !important; }
@@ -188,6 +200,11 @@
     <div class="spacer"></div>
     <a id="signin-link" href="/sign-in/?next=%2Fportal%2F" class="signin-link">Sign In</a>
     <a id="portal-cta-link" href="/sample-portal/" class="cta-nav">Sample Portal</a>
+    <div id="user-area" class="user-area hidden">
+      <span id="user-name">Guest</span>
+      <div class="avatar" id="user-avatar">G</div>
+      <button id="logout-btn" type="button">Sign out</button>
+    </div>
   </div>
 
   <!-- Hero -->
@@ -401,6 +418,10 @@ graph LR
     var SAMPLE_PORTAL_URL = '/sample-portal/';
     var REAL_PORTAL_URL = '/portal/';
 
+    function displayName(user) {
+      return (user && (user.displayName || user.email)) || 'Guest';
+    }
+
     function setPortalLinks(url, label) {
       var nav = document.getElementById('portal-nav-link');
       var cta = document.getElementById('portal-cta-link');
@@ -421,24 +442,50 @@ graph LR
 
     function setSignedInChrome(user) {
       var signIn = document.getElementById('signin-link');
+      var userArea = document.getElementById('user-area');
+      var userName = document.getElementById('user-name');
+      var userAvatar = document.getElementById('user-avatar');
       if (signIn) {
         signIn.classList.add('hidden');
       }
+      if (userArea) {
+        userArea.classList.remove('hidden');
+      }
+      if (userName) {
+        userName.textContent = displayName(user);
+      }
+      if (userAvatar) {
+        userAvatar.textContent = displayName(user).charAt(0).toUpperCase();
+      }
       setPortalLinks(REAL_PORTAL_URL, 'Open Portal');
       var cta = document.getElementById('portal-cta-link');
-      if (cta && user && user.displayName) {
-        cta.title = 'Signed in as ' + user.displayName;
+      if (cta && user) {
+        cta.title = 'Signed in as ' + displayName(user);
       }
     }
 
     function setSignedOutChrome() {
       var signIn = document.getElementById('signin-link');
+      var userArea = document.getElementById('user-area');
       if (signIn) {
         signIn.href = SIGN_IN_URL;
         signIn.textContent = 'Sign In';
         signIn.classList.remove('hidden');
       }
+      if (userArea) {
+        userArea.classList.add('hidden');
+      }
       setPortalLinks(SAMPLE_PORTAL_URL, 'Sample Portal');
+    }
+
+    var logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', function () {
+        fetch('/api/logout', { method: 'POST' })
+          .then(function () {
+            window.location.reload();
+          });
+      });
     }
 
     setSignedOutChrome();
