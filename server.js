@@ -115,6 +115,45 @@ async function initDatabase() {
   `);
 
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS hub_memberships (
+      id BIGSERIAL PRIMARY KEY,
+      hub_id BIGINT NOT NULL REFERENCES hubs(id) ON DELETE CASCADE,
+      user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      role TEXT NOT NULL DEFAULT 'viewer',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (hub_id, user_id)
+    )
+  `);
+
+  await pool.query(`
+    ALTER TABLE hubs
+    ADD COLUMN IF NOT EXISTS owner_user_id BIGINT REFERENCES users(id) ON DELETE SET NULL
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_hubs_owner_user_id ON hubs(owner_user_id)
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_hub_memberships_user_id ON hub_memberships(user_id)
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_hub_memberships_hub_id ON hub_memberships(hub_id)
+  `);
+
+  await pool.query(`
+    ALTER TABLE hub_memberships
+    DROP CONSTRAINT IF EXISTS hub_memberships_role_check
+  `);
+
+  await pool.query(`
+    ALTER TABLE hub_memberships
+    ADD CONSTRAINT hub_memberships_role_check
+    CHECK (role IN ('owner', 'admin', 'viewer'))
+  `);
+
+  await pool.query(`
     CREATE OR REPLACE FUNCTION set_updated_at() RETURNS TRIGGER AS $$
     BEGIN
       NEW.updated_at = NOW();
@@ -217,6 +256,11 @@ async function countUsers() {
   return result.rows[0].count;
 }
 
+async function countAdmins() {
+  const result = await pool.query('SELECT COUNT(*)::int AS count FROM users WHERE is_admin = TRUE');
+  return result.rows[0].count;
+}
+
 async function ensureBootstrapAdmin() {
   const userCount = await countUsers();
   if (userCount > 0) return;
@@ -235,6 +279,13 @@ async function findUserByEmail(email) {
   const result = await pool.query(
     'SELECT id, email, display_name AS "displayName", password_hash AS "passwordHash", is_admin AS "isAdmin" FROM users WHERE email = $1',
     [email.trim().toLowerCase()]
+  );
+  return result.rows[0] || null;
+}
+
+async function findFirstAdminUser() {
+  const result = await pool.query(
+    'SELECT id, email, display_name AS "displayName", is_admin AS "isAdmin" FROM users WHERE is_admin = TRUE ORDER BY id ASC LIMIT 1'
   );
   return result.rows[0] || null;
 }
@@ -309,6 +360,97 @@ async function importLegacyConfigIfNeeded() {
   console.log(`[awansaya] imported ${cfg.hubs.length} hub(s) from legacy config.json`);
 }
 
+async function backfillHubOwnership() {
+  const adminCount = await countAdmins();
+  if (adminCount !== 1) return;
+  const admin = await findFirstAdminUser();
+  if (!admin) return;
+
+  const result = await pool.query(
+    `UPDATE hubs
+     SET owner_user_id = $1
+     WHERE owner_user_id IS NULL`,
+    [admin.id]
+  );
+
+  if (result.rowCount > 0) {
+    console.log(`[awansaya] assigned ${result.rowCount} existing hub(s) to bootstrap admin ${admin.email}`);
+  }
+
+  await pool.query(
+    `INSERT INTO hub_memberships (hub_id, user_id, role)
+     SELECT h.id, $1, 'owner'
+     FROM hubs h
+     WHERE h.owner_user_id = $1
+     ON CONFLICT (hub_id, user_id) DO UPDATE SET role = EXCLUDED.role`,
+    [admin.id]
+  );
+}
+
+function canManageRole(role) {
+  return role === 'owner' || role === 'admin';
+}
+
+async function listHubsForUser(user) {
+  if (!user) return [];
+  if (user.isAdmin) {
+    const result = await pool.query(
+      `SELECT h.id, h.name, h.url, h.viewer_token AS "viewerToken", TRUE AS "canManage"
+       FROM hubs h
+       ORDER BY h.name ASC`
+    );
+    return result.rows;
+  }
+
+  const result = await pool.query(
+    `SELECT h.id,
+            h.name,
+            h.url,
+            h.viewer_token AS "viewerToken",
+            CASE
+              WHEN h.owner_user_id = $1 THEN TRUE
+              WHEN hm.role IN ('owner', 'admin') THEN TRUE
+              ELSE FALSE
+            END AS "canManage"
+     FROM hubs h
+     LEFT JOIN hub_memberships hm ON hm.hub_id = h.id AND hm.user_id = $1
+     WHERE h.owner_user_id = $1 OR hm.user_id IS NOT NULL
+     ORDER BY h.name ASC`,
+    [user.id]
+  );
+  return result.rows;
+}
+
+async function lookupHubForUser(user, hubName) {
+  if (!user) return null;
+  if (user.isAdmin) {
+    const result = await pool.query(
+      `SELECT h.id, h.name, h.url, h.viewer_token AS "viewerToken", TRUE AS "canManage"
+       FROM hubs h
+       WHERE h.name = $1`,
+      [hubName]
+    );
+    return result.rows[0] || null;
+  }
+
+  const result = await pool.query(
+    `SELECT h.id,
+            h.name,
+            h.url,
+            h.viewer_token AS "viewerToken",
+            CASE
+              WHEN h.owner_user_id = $1 THEN TRUE
+              WHEN hm.role IN ('owner', 'admin') THEN TRUE
+              ELSE FALSE
+            END AS "canManage"
+     FROM hubs h
+     LEFT JOIN hub_memberships hm ON hm.hub_id = h.id AND hm.user_id = $1
+     WHERE h.name = $2 AND (h.owner_user_id = $1 OR hm.user_id IS NOT NULL)`,
+    [user.id, hubName]
+  );
+  return result.rows[0] || null;
+}
+
 async function listHubs() {
   const result = await pool.query(
     'SELECT name, url, viewer_token AS "viewerToken" FROM hubs ORDER BY name ASC'
@@ -324,12 +466,21 @@ async function lookupHub(hubName) {
   return result.rows[0] || null;
 }
 
-async function insertHub(name, hubUrl, viewerToken) {
+async function insertHub(name, hubUrl, viewerToken, ownerUserId) {
   try {
     await pool.query(
-      'INSERT INTO hubs (name, url, viewer_token) VALUES ($1, $2, $3)',
-      [name, hubUrl, viewerToken || null]
+      'INSERT INTO hubs (name, url, viewer_token, owner_user_id) VALUES ($1, $2, $3, $4)',
+      [name, hubUrl, viewerToken || null, ownerUserId || null]
     );
+
+    if (ownerUserId) {
+      await pool.query(
+        `INSERT INTO hub_memberships (hub_id, user_id, role)
+         SELECT id, $2, 'owner' FROM hubs WHERE name = $1
+         ON CONFLICT (hub_id, user_id) DO UPDATE SET role = EXCLUDED.role`,
+        [name, ownerUserId]
+      );
+    }
   } catch (err) {
     if (err.code === '23505') {
       const dupe = await pool.query('SELECT 1 FROM hubs WHERE name = $1 OR url = $2 LIMIT 1', [name, hubUrl]);
@@ -389,12 +540,14 @@ async function apiAuthMode(req, res) {
   try {
     const user = await getSessionUser(req, true);
     const userCount = await countUsers();
+    const visibleHubs = user ? await listHubsForUser(user) : [];
     jsonOK(res, {
       manageLocked: !!API_TOKEN || userCount > 0,
       authEnabled: userCount > 0,
       bootstrapRequired: userCount === 0,
       authenticated: !!user,
       canManageHubs: hasBearerAdmin(req) || !!(user && user.isAdmin),
+      visibleHubCount: visibleHubs.length,
       user: user ? {
         email: user.email,
         displayName: user.displayName,
@@ -445,11 +598,12 @@ async function apiLogout(req, res) {
   }
 }
 
-// GET /api/hubs — return the hub list from PostgreSQL (tokens stripped)
-// Always open: the response is read-only (viewer tokens are stripped).
+// GET /api/hubs — return the visible hub list for the authenticated user.
 async function apiGetHubs(req, res) {
   try {
-    const hubs = (await listHubs()).map(h => ({ name: h.name, url: h.url }));
+    const user = await requireAuthenticated(req, res);
+    if (!user) return;
+    const hubs = (await listHubsForUser(user)).map(h => ({ name: h.name, url: h.url, canManage: !!h.canManage }));
     jsonOK(res, { hubs });
   } catch (err) {
     jsonError(res, 500, 'database error');
@@ -460,36 +614,49 @@ async function apiGetHubs(req, res) {
 function apiAddHub(req, res) {
   checkManageAuth(req, res).then(allowed => {
     if (!allowed) return;
-  readBody(req, (err, body) => {
-    if (err || !body) return jsonError(res, 400, 'invalid JSON body');
-    const name        = (body.name || '').trim();
-    const hubUrl      = (body.url  || '').trim().replace(/\/+$/, '');
-    const viewerToken = (body.viewerToken || '').trim();
-    if (!name || !hubUrl) return jsonError(res, 400, 'name and url are required');
+    getSessionUser(req, true).then(sessionUser => {
+      readBody(req, (err, body) => {
+        if (err || !body) return jsonError(res, 400, 'invalid JSON body');
+        const name        = (body.name || '').trim();
+        const hubUrl      = (body.url  || '').trim().replace(/\/+$/, '');
+        const viewerToken = (body.viewerToken || '').trim();
+        if (!name || !hubUrl) return jsonError(res, 400, 'name and url are required');
 
-	insertHub(name, hubUrl, viewerToken)
-		.then(async () => {
-			const hubs = (await listHubs()).map(h => ({ name: h.name, url: h.url }));
-			jsonOK(res, { hubs });
-		})
-		.catch(err2 => {
-			jsonError(res, err2.statusCode || 500, err2.statusCode ? err2.message : 'database error');
-		});
-  });
+        insertHub(name, hubUrl, viewerToken, sessionUser && sessionUser.id ? sessionUser.id : null)
+          .then(async () => {
+            const user = sessionUser || await getSessionUser(req, true);
+            const hubs = user
+              ? (await listHubsForUser(user)).map(h => ({ name: h.name, url: h.url, canManage: !!h.canManage }))
+              : (await listHubs()).map(h => ({ name: h.name, url: h.url, canManage: true }));
+            jsonOK(res, { hubs });
+          })
+          .catch(err2 => {
+            jsonError(res, err2.statusCode || 500, err2.statusCode ? err2.message : 'database error');
+          });
+      });
+    });
   });
 }
 
 // DELETE /api/hubs?name=<name> — remove a hub by name
 async function apiDeleteHub(req, res) {
-  if (!await checkManageAuth(req, res)) return;
   const u = new URL(req.url, 'http://localhost');
   const name = (u.searchParams.get('name') || '').trim();
   if (!name) return jsonError(res, 400, 'name query parameter is required');
 
+  const sessionUser = await getSessionUser(req, true);
+  if (!hasBearerAdmin(req)) {
+    if (!sessionUser) return jsonError(res, 401, 'unauthorized');
+    const hub = await lookupHubForUser(sessionUser, name);
+    if (!hub || !hub.canManage) return jsonError(res, 401, 'unauthorized');
+  }
+
 	try {
 		const deleted = await deleteHubByName(name);
 		if (!deleted) return jsonError(res, 404, 'hub not found');
-		const hubs = (await listHubs()).map(h => ({ name: h.name, url: h.url }));
+    const hubs = sessionUser
+      ? (await listHubsForUser(sessionUser)).map(h => ({ name: h.name, url: h.url, canManage: !!h.canManage }))
+      : (await listHubs()).map(h => ({ name: h.name, url: h.url, canManage: true }));
 		jsonOK(res, { hubs });
 	} catch (err) {
 		jsonError(res, 500, 'database error');
@@ -517,7 +684,7 @@ async function apiHubStatus(req, res, hubName) {
   try {
     const user = await requireAuthenticated(req, res);
     if (!user) return;
-    const hub = await lookupHub(hubName);
+    const hub = await lookupHubForUser(user, hubName);
     if (!hub) return jsonError(res, 404, 'hub not found');
 
     let targetUrl = hub.url + '/api/status';
@@ -536,7 +703,7 @@ async function apiHubHistory(req, res, hubName) {
   try {
     const user = await requireAuthenticated(req, res);
     if (!user) return;
-    const hub = await lookupHub(hubName);
+    const hub = await lookupHubForUser(user, hubName);
     if (!hub) return jsonError(res, 404, 'hub not found');
 
     let targetUrl = hub.url + '/api/history';
@@ -633,6 +800,7 @@ async function main() {
   await initDatabase();
   await importLegacyConfigIfNeeded();
 	await ensureBootstrapAdmin();
+	await backfillHubOwnership();
   server.listen(PORT, () => {
     console.log(`[awansaya] listening on :${PORT}`);
   });
