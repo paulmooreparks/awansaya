@@ -391,6 +391,18 @@ function canManageRole(role) {
   return role === 'owner' || role === 'admin';
 }
 
+function isMembershipRole(role) {
+  return role === 'admin' || role === 'viewer';
+}
+
+function normalizeEmail(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
 async function listHubsForUser(user) {
   if (!user) return [];
   if (user.isAdmin) {
@@ -458,6 +470,60 @@ async function listHubs() {
   return result.rows;
 }
 
+async function listUsersForAdmin() {
+  const result = await pool.query(
+    `SELECT id,
+            email,
+            display_name AS "displayName",
+            is_admin AS "isAdmin",
+            created_at AS "createdAt"
+     FROM users
+     ORDER BY is_admin DESC, email ASC`
+  );
+  return result.rows;
+}
+
+async function listHubsForAdminOverview() {
+  const result = await pool.query(
+    `SELECT h.id,
+            h.name,
+            h.url,
+            h.owner_user_id AS "ownerUserId",
+            u.display_name AS "ownerDisplayName",
+            u.email AS "ownerEmail"
+     FROM hubs h
+     LEFT JOIN users u ON u.id = h.owner_user_id
+     ORDER BY h.name ASC`
+  );
+  return result.rows;
+}
+
+async function listHubMembershipsForAdmin() {
+  const result = await pool.query(
+    `SELECT hm.user_id AS "userId",
+            hm.hub_id AS "hubId",
+            hm.role,
+            hm.created_at AS "createdAt",
+            h.name AS "hubName",
+            u.email,
+            u.display_name AS "displayName"
+     FROM hub_memberships hm
+     JOIN hubs h ON h.id = hm.hub_id
+     JOIN users u ON u.id = hm.user_id
+     ORDER BY u.email ASC, h.name ASC`
+  );
+  return result.rows;
+}
+
+async function getAdminAccessOverview() {
+  const [users, hubs, memberships] = await Promise.all([
+    listUsersForAdmin(),
+    listHubsForAdminOverview(),
+    listHubMembershipsForAdmin(),
+  ]);
+  return { users, hubs, memberships };
+}
+
 async function lookupHub(hubName) {
   const result = await pool.query(
     'SELECT name, url, viewer_token AS "viewerToken" FROM hubs WHERE name = $1',
@@ -491,6 +557,82 @@ async function insertHub(name, hubUrl, viewerToken, ownerUserId) {
       }
     }
     throw err;
+  }
+}
+
+async function createUserAccount(email, displayName, password, isAdmin) {
+  try {
+    const result = await pool.query(
+      `INSERT INTO users (email, display_name, password_hash, is_admin)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, email, display_name AS "displayName", is_admin AS "isAdmin"`,
+      [email, displayName, hashPassword(password), !!isAdmin]
+    );
+    return result.rows[0];
+  } catch (err) {
+    if (err.code === '23505') {
+      const conflict = new Error('user with that email already exists');
+      conflict.statusCode = 409;
+      throw conflict;
+    }
+    throw err;
+  }
+}
+
+async function upsertHubMembershipByName(userId, hubName, role) {
+  const userResult = await pool.query('SELECT id FROM users WHERE id = $1', [userId]);
+  if (userResult.rowCount === 0) {
+    const notFound = new Error('user not found');
+    notFound.statusCode = 404;
+    throw notFound;
+  }
+
+  const hubResult = await pool.query('SELECT id, owner_user_id AS "ownerUserId" FROM hubs WHERE name = $1', [hubName]);
+  if (hubResult.rowCount === 0) {
+    const notFound = new Error('hub not found');
+    notFound.statusCode = 404;
+    throw notFound;
+  }
+
+  const hub = hubResult.rows[0];
+  if (hub.ownerUserId && Number(hub.ownerUserId) === Number(userId)) {
+    const conflict = new Error('hub owner already has full access');
+    conflict.statusCode = 409;
+    throw conflict;
+  }
+
+  await pool.query(
+    `INSERT INTO hub_memberships (hub_id, user_id, role)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (hub_id, user_id) DO UPDATE SET role = EXCLUDED.role`,
+    [hub.id, userId, role]
+  );
+}
+
+async function revokeHubMembershipByName(userId, hubName) {
+  const hubResult = await pool.query('SELECT id, owner_user_id AS "ownerUserId" FROM hubs WHERE name = $1', [hubName]);
+  if (hubResult.rowCount === 0) {
+    const notFound = new Error('hub not found');
+    notFound.statusCode = 404;
+    throw notFound;
+  }
+
+  const hub = hubResult.rows[0];
+  if (hub.ownerUserId && Number(hub.ownerUserId) === Number(userId)) {
+    const conflict = new Error('cannot revoke the hub owner');
+    conflict.statusCode = 409;
+    throw conflict;
+  }
+
+  const result = await pool.query(
+    'DELETE FROM hub_memberships WHERE hub_id = $1 AND user_id = $2',
+    [hub.id, userId]
+  );
+
+  if (result.rowCount === 0) {
+    const notFound = new Error('membership not found');
+    notFound.statusCode = 404;
+    throw notFound;
   }
 }
 
@@ -595,6 +737,83 @@ async function apiLogout(req, res) {
     jsonOK(res, { authenticated: false });
   } catch (err) {
     jsonError(res, 500, 'database error');
+  }
+}
+
+async function apiAdminGetAccess(req, res) {
+  if (!await checkManageAuth(req, res)) return;
+  try {
+    jsonOK(res, await getAdminAccessOverview());
+  } catch (err) {
+    jsonError(res, 500, 'database error');
+  }
+}
+
+function apiAdminCreateUser(req, res) {
+  checkManageAuth(req, res).then(allowed => {
+    if (!allowed) return;
+    readBody(req, (err, body) => {
+      if (err || !body) return jsonError(res, 400, 'invalid JSON body');
+
+      const email = normalizeEmail(body.email);
+      const displayName = String(body.displayName || '').trim();
+      const password = String(body.password || '');
+      const isAdmin = !!body.isAdmin;
+
+      if (!email || !displayName || !password) return jsonError(res, 400, 'displayName, email, and password are required');
+      if (!isValidEmail(email)) return jsonError(res, 400, 'valid email is required');
+      if (password.length < 8) return jsonError(res, 400, 'password must be at least 8 characters');
+
+      createUserAccount(email, displayName, password, isAdmin)
+        .then(async () => {
+          jsonOK(res, await getAdminAccessOverview());
+        })
+        .catch(dbErr => {
+          jsonError(res, dbErr.statusCode || 500, dbErr.statusCode ? dbErr.message : 'database error');
+        });
+    });
+  });
+}
+
+function apiAdminUpsertMembership(req, res) {
+  checkManageAuth(req, res).then(allowed => {
+    if (!allowed) return;
+    readBody(req, (err, body) => {
+      if (err || !body) return jsonError(res, 400, 'invalid JSON body');
+
+      const userId = Number(body.userId);
+      const hubName = String(body.hubName || '').trim();
+      const role = String(body.role || '').trim().toLowerCase();
+
+      if (!Number.isInteger(userId) || userId <= 0) return jsonError(res, 400, 'valid userId is required');
+      if (!hubName) return jsonError(res, 400, 'hubName is required');
+      if (!isMembershipRole(role)) return jsonError(res, 400, 'role must be admin or viewer');
+
+      upsertHubMembershipByName(userId, hubName, role)
+        .then(async () => {
+          jsonOK(res, await getAdminAccessOverview());
+        })
+        .catch(dbErr => {
+          jsonError(res, dbErr.statusCode || 500, dbErr.statusCode ? dbErr.message : 'database error');
+        });
+    });
+  });
+}
+
+async function apiAdminDeleteMembership(req, res) {
+  if (!await checkManageAuth(req, res)) return;
+  const u = new URL(req.url, 'http://localhost');
+  const userId = Number(u.searchParams.get('userId'));
+  const hubName = String(u.searchParams.get('hubName') || '').trim();
+
+  if (!Number.isInteger(userId) || userId <= 0) return jsonError(res, 400, 'valid userId is required');
+  if (!hubName) return jsonError(res, 400, 'hubName is required');
+
+  try {
+    await revokeHubMembershipByName(userId, hubName);
+    jsonOK(res, await getAdminAccessOverview());
+  } catch (err) {
+    jsonError(res, err.statusCode || 500, err.statusCode ? err.message : 'database error');
   }
 }
 
@@ -745,6 +964,19 @@ async function serve(req, res) {
     if (method === 'GET' || method === 'HEAD') return apiGetHubs(req, res);
     if (method === 'POST')   return apiAddHub(req, res);
     if (method === 'DELETE') return apiDeleteHub(req, res);
+    res.writeHead(405); res.end(); return;
+  }
+  if (urlPath === '/api/admin/access') {
+    if (method === 'GET' || method === 'HEAD') return apiAdminGetAccess(req, res);
+    res.writeHead(405); res.end(); return;
+  }
+  if (urlPath === '/api/admin/users') {
+    if (method === 'POST') return apiAdminCreateUser(req, res);
+    res.writeHead(405); res.end(); return;
+  }
+  if (urlPath === '/api/admin/memberships') {
+    if (method === 'POST') return apiAdminUpsertMembership(req, res);
+    if (method === 'DELETE') return apiAdminDeleteMembership(req, res);
     res.writeHead(405); res.end(); return;
   }
 
