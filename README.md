@@ -105,9 +105,13 @@ Server-side proxy — fetches `/api/history` from the named hub using the stored
 
 ## Configuration
 
-### `www/portal/config.json`
+### Database-backed hub directory
 
-The portal stores its hub directory in [www/portal/config.json](www/portal/config.json):
+The portal stores its hub directory in PostgreSQL.
+
+On first startup, if the database is empty and [www/portal/config.json](www/portal/config.json) exists locally, the server imports its contents automatically.
+
+Legacy file format:
 
 ```json
 {
@@ -123,6 +127,22 @@ The portal stores its hub directory in [www/portal/config.json](www/portal/confi
 - The Tela CLI converts `https://` → `wss://` (and `http://` → `ws://`) when resolving hub names via the portal.
 
 To protect hub management, set `AWANSAYA_API_TOKEN` on the portal server (via a `.env` file — do not commit the token). Reading the hub directory (`GET /api/hubs`) is always open. Adding and removing hubs (`POST`/`DELETE`) require `Authorization: Bearer <token>`.
+
+### Docker Compose database
+
+`docker compose up --build` now starts:
+
+- `portal` — the Awan Saya Node server
+- `db` — PostgreSQL 16 with a named Docker volume for persistent data
+
+The database volume is `awansaya-db-data`, so hub records survive container restarts and image rebuilds.
+
+Relevant environment variables:
+
+- `AWANSAYA_DB_NAME`
+- `AWANSAYA_DB_USER`
+- `AWANSAYA_DB_PASSWORD`
+- `DATABASE_URL` (set automatically in `docker-compose.yml`)
 
 ## Development
 

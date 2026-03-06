@@ -4,22 +4,27 @@
   Serves the www/ directory on PORT (default 3000).
   Resolves directory requests to index.html.
 
-  Hubs are registered via POST /api/hubs with a name, URL, and viewer
-  token.  The viewer token is stored in config.json but never exposed
-  to the browser.  Server-side proxy endpoints /api/hub-status/<name>
-  and /api/hub-history/<name> use the stored token to fetch data from
-  each hub so auth secrets stay on the server.
+  Hub records are stored in PostgreSQL. On first startup, if the hubs
+  table is empty and a legacy www/portal/config.json file exists, its
+  data is imported automatically.
 */
-const http  = require('http');
+const http = require('http');
 const https = require('https');
-const fs    = require('fs');
-const path  = require('path');
-const url   = require('url');
+const fs = require('fs');
+const path = require('path');
+const { Pool } = require('pg');
 
-const PORT          = parseInt(process.env.PORT || '3000', 10);
-const WWW_DIR       = path.join(__dirname, 'www');
-const API_TOKEN     = process.env.AWANSAYA_API_TOKEN || '';   // empty = open mode
-const CONFIG_PATH   = path.join(WWW_DIR, 'portal', 'config.json');
+const PORT = parseInt(process.env.PORT || '3000', 10);
+const WWW_DIR = path.join(__dirname, 'www');
+const API_TOKEN = process.env.AWANSAYA_API_TOKEN || '';   // empty = open mode
+const CONFIG_PATH = path.join(WWW_DIR, 'portal', 'config.json');
+const DATABASE_URL = process.env.DATABASE_URL || 'postgres://awansaya:awansaya-dev-password@db:5432/awansaya';
+const DB_CONNECT_RETRIES = parseInt(process.env.DB_CONNECT_RETRIES || '30', 10);
+const DB_CONNECT_DELAY_MS = parseInt(process.env.DB_CONNECT_DELAY_MS || '2000', 10);
+
+const pool = new Pool({
+	connectionString: DATABASE_URL,
+});
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -45,19 +50,127 @@ function checkAuth(req, res) {
   return false;
 }
 
-// ── Helpers for config.json I/O ─────────────────────────────────
-
-function readConfig(cb) {
-  fs.readFile(CONFIG_PATH, 'utf8', (err, raw) => {
-    if (err) return cb(err, null);
-    try { cb(null, JSON.parse(raw)); }
-    catch (e) { cb(e, null); }
-  });
+async function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-function writeConfig(cfg, cb) {
-  const json = JSON.stringify(cfg, null, 2) + '\n';
-  fs.writeFile(CONFIG_PATH, json, 'utf8', cb);
+async function connectWithRetry() {
+  for (let attempt = 1; attempt <= DB_CONNECT_RETRIES; attempt += 1) {
+    try {
+      const client = await pool.connect();
+      client.release();
+      return;
+    } catch (err) {
+      if (attempt === DB_CONNECT_RETRIES) throw err;
+      console.warn(`[awansaya] database not ready (attempt ${attempt}/${DB_CONNECT_RETRIES}): ${err.message}`);
+      await sleep(DB_CONNECT_DELAY_MS);
+    }
+  }
+}
+
+async function initDatabase() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS hubs (
+      id BIGSERIAL PRIMARY KEY,
+      name TEXT NOT NULL UNIQUE,
+      url TEXT NOT NULL UNIQUE,
+      viewer_token TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`
+    CREATE OR REPLACE FUNCTION set_updated_at() RETURNS TRIGGER AS $$
+    BEGIN
+      NEW.updated_at = NOW();
+      RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql
+  `);
+
+  await pool.query(`
+    DROP TRIGGER IF EXISTS hubs_set_updated_at ON hubs
+  `);
+
+  await pool.query(`
+    CREATE TRIGGER hubs_set_updated_at
+    BEFORE UPDATE ON hubs
+    FOR EACH ROW
+    EXECUTE FUNCTION set_updated_at()
+  `);
+}
+
+function readLegacyConfig() {
+  if (!fs.existsSync(CONFIG_PATH)) return null;
+  try {
+    return JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+  } catch (err) {
+    console.warn(`[awansaya] failed to parse legacy config: ${err.message}`);
+    return null;
+  }
+}
+
+async function importLegacyConfigIfNeeded() {
+  const result = await pool.query('SELECT COUNT(*)::int AS count FROM hubs');
+  if (result.rows[0].count > 0) return;
+
+  const cfg = readLegacyConfig();
+  if (!cfg || !Array.isArray(cfg.hubs) || cfg.hubs.length === 0) return;
+
+  for (const hub of cfg.hubs) {
+    const name = String(hub.name || '').trim();
+    const hubUrl = String(hub.url || '').trim().replace(/\/+$/, '');
+    const viewerToken = String(hub.viewerToken || '').trim() || null;
+    if (!name || !hubUrl) continue;
+    await pool.query(
+      `INSERT INTO hubs (name, url, viewer_token)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (name) DO UPDATE SET url = EXCLUDED.url, viewer_token = EXCLUDED.viewer_token`,
+      [name, hubUrl, viewerToken]
+    );
+  }
+
+  console.log(`[awansaya] imported ${cfg.hubs.length} hub(s) from legacy config.json`);
+}
+
+async function listHubs() {
+  const result = await pool.query(
+    'SELECT name, url, viewer_token AS "viewerToken" FROM hubs ORDER BY name ASC'
+  );
+  return result.rows;
+}
+
+async function lookupHub(hubName) {
+  const result = await pool.query(
+    'SELECT name, url, viewer_token AS "viewerToken" FROM hubs WHERE name = $1',
+    [hubName]
+  );
+  return result.rows[0] || null;
+}
+
+async function insertHub(name, hubUrl, viewerToken) {
+  try {
+    await pool.query(
+      'INSERT INTO hubs (name, url, viewer_token) VALUES ($1, $2, $3)',
+      [name, hubUrl, viewerToken || null]
+    );
+  } catch (err) {
+    if (err.code === '23505') {
+      const dupe = await pool.query('SELECT 1 FROM hubs WHERE name = $1 OR url = $2 LIMIT 1', [name, hubUrl]);
+      if (dupe.rowCount > 0) {
+        const conflict = new Error('hub with that name or URL already exists');
+        conflict.statusCode = 409;
+        throw conflict;
+      }
+    }
+    throw err;
+  }
+}
+
+async function deleteHubByName(name) {
+  const result = await pool.query('DELETE FROM hubs WHERE name = $1', [name]);
+  return result.rowCount;
 }
 
 function jsonError(res, status, msg) {
@@ -84,15 +197,15 @@ function apiAuthMode(req, res) {
   jsonOK(res, { manageLocked: !!API_TOKEN });
 }
 
-// GET /api/hubs — return the hub list from portal/config.json (tokens stripped)
+// GET /api/hubs — return the hub list from PostgreSQL (tokens stripped)
 // Always open: the response is read-only (viewer tokens are stripped).
-function apiGetHubs(req, res) {
-  readConfig((err, cfg) => {
-    if (err) return jsonError(res, 500, 'config not found');
-    // Strip viewerToken so it never reaches the browser
-    const hubs = (cfg.hubs || []).map(h => ({ name: h.name, url: h.url }));
+async function apiGetHubs(req, res) {
+  try {
+    const hubs = (await listHubs()).map(h => ({ name: h.name, url: h.url }));
     jsonOK(res, { hubs });
-  });
+  } catch (err) {
+    jsonError(res, 500, 'database error');
+  }
 }
 
 // POST /api/hubs — add a hub { name, url, viewerToken }
@@ -105,59 +218,35 @@ function apiAddHub(req, res) {
     const viewerToken = (body.viewerToken || '').trim();
     if (!name || !hubUrl) return jsonError(res, 400, 'name and url are required');
 
-    readConfig((err, cfg) => {
-      if (err) return jsonError(res, 500, 'config not found');
-      const hubs = cfg.hubs || [];
-      const dup = hubs.find(h => h.name === name || h.url === hubUrl);
-      if (dup) return jsonError(res, 409, 'hub with that name or URL already exists');
-
-      const entry = { name, url: hubUrl };
-      if (viewerToken) entry.viewerToken = viewerToken;
-      hubs.push(entry);
-      cfg.hubs = hubs;
-      writeConfig(cfg, (err) => {
-        if (err) return jsonError(res, 500, 'failed to write config');
-        // Return list without tokens
-        const safe = hubs.map(h => ({ name: h.name, url: h.url }));
-        jsonOK(res, { hubs: safe });
-      });
-    });
+	insertHub(name, hubUrl, viewerToken)
+		.then(async () => {
+			const hubs = (await listHubs()).map(h => ({ name: h.name, url: h.url }));
+			jsonOK(res, { hubs });
+		})
+		.catch(err2 => {
+			jsonError(res, err2.statusCode || 500, err2.statusCode ? err2.message : 'database error');
+		});
   });
 }
 
 // DELETE /api/hubs?name=<name> — remove a hub by name
-function apiDeleteHub(req, res) {
+async function apiDeleteHub(req, res) {
   if (!checkAuth(req, res)) return;
   const u = new URL(req.url, 'http://localhost');
   const name = (u.searchParams.get('name') || '').trim();
   if (!name) return jsonError(res, 400, 'name query parameter is required');
 
-  readConfig((err, cfg) => {
-    if (err) return jsonError(res, 500, 'config not found');
-    const hubs = cfg.hubs || [];
-    const idx = hubs.findIndex(h => h.name === name);
-    if (idx === -1) return jsonError(res, 404, 'hub not found');
-
-    hubs.splice(idx, 1);
-    cfg.hubs = hubs;
-    writeConfig(cfg, (err) => {
-      if (err) return jsonError(res, 500, 'failed to write config');
-      const safe = hubs.map(h => ({ name: h.name, url: h.url }));
-      jsonOK(res, { hubs: safe });
-    });
-  });
+	try {
+		const deleted = await deleteHubByName(name);
+		if (!deleted) return jsonError(res, 404, 'hub not found');
+		const hubs = (await listHubs()).map(h => ({ name: h.name, url: h.url }));
+		jsonOK(res, { hubs });
+	} catch (err) {
+		jsonError(res, 500, 'database error');
+	}
 }
 
 // ── Server-side hub status/history proxy ────────────────────────────
-
-// Looks up a hub by name in config.json and returns { url, viewerToken }.
-function lookupHub(hubName, cb) {
-  readConfig((err, cfg) => {
-    if (err) return cb(null);
-    const hub = (cfg.hubs || []).find(h => h.name === hubName);
-    cb(hub || null);
-  });
-}
 
 // Fetches a URL using the correct http/https module, returns a Promise<string>.
 function proxyFetch(targetUrl) {
@@ -174,46 +263,42 @@ function proxyFetch(targetUrl) {
 }
 
 // GET /api/hub-status/<name> — proxy to hub's /api/status with viewer token
-function apiHubStatus(req, res, hubName) {
-  lookupHub(hubName, (hub) => {
+async function apiHubStatus(req, res, hubName) {
+  try {
+    const hub = await lookupHub(hubName);
     if (!hub) return jsonError(res, 404, 'hub not found');
 
     let targetUrl = hub.url + '/api/status';
     if (hub.viewerToken) targetUrl += '?token=' + encodeURIComponent(hub.viewerToken);
 
-    proxyFetch(targetUrl)
-      .then(result => {
-        res.writeHead(result.status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
-        res.end(result.body);
-      })
-      .catch(err => {
-        jsonError(res, 502, 'hub unreachable: ' + err.message);
-      });
-  });
+    const result = await proxyFetch(targetUrl);
+    res.writeHead(result.status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+    res.end(result.body);
+  } catch (err) {
+    jsonError(res, 502, 'hub unreachable: ' + err.message);
+  }
 }
 
 // GET /api/hub-history/<name> — proxy to hub's /api/history with viewer token
-function apiHubHistory(req, res, hubName) {
-  lookupHub(hubName, (hub) => {
+async function apiHubHistory(req, res, hubName) {
+  try {
+    const hub = await lookupHub(hubName);
     if (!hub) return jsonError(res, 404, 'hub not found');
 
     let targetUrl = hub.url + '/api/history';
     if (hub.viewerToken) targetUrl += '?token=' + encodeURIComponent(hub.viewerToken);
 
-    proxyFetch(targetUrl)
-      .then(result => {
-        res.writeHead(result.status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
-        res.end(result.body);
-      })
-      .catch(err => {
-        jsonError(res, 502, 'hub unreachable: ' + err.message);
-      });
-  });
+    const result = await proxyFetch(targetUrl);
+    res.writeHead(result.status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+    res.end(result.body);
+  } catch (err) {
+    jsonError(res, 502, 'hub unreachable: ' + err.message);
+  }
 }
 
 // ── Request router ─────────────────────────────────────────────────
 
-function serve(req, res) {
+async function serve(req, res) {
   const method  = req.method;
   const urlPath = decodeURIComponent(req.url.split('?')[0]);
 
@@ -275,6 +360,17 @@ function sendFile(filePath, res) {
 }
 
 const server = http.createServer(serve);
-server.listen(PORT, () => {
-  console.log(`[awansaya] listening on :${PORT}`);
+
+async function main() {
+  await connectWithRetry();
+  await initDatabase();
+  await importLegacyConfigIfNeeded();
+  server.listen(PORT, () => {
+    console.log(`[awansaya] listening on :${PORT}`);
+  });
+}
+
+main().catch(err => {
+  console.error(`[awansaya] startup failed: ${err.stack || err.message}`);
+  process.exit(1);
 });

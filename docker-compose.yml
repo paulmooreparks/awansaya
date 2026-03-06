@@ -1,10 +1,33 @@
 services:
+  db:
+    image: postgres:16-alpine
+    container_name: awansaya-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${AWANSAYA_DB_NAME:-awansaya}
+      POSTGRES_USER: ${AWANSAYA_DB_USER:-awansaya}
+      POSTGRES_PASSWORD: ${AWANSAYA_DB_PASSWORD:-awansaya-dev-password}
+    volumes:
+      - awansaya-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   portal:
     build: .
     container_name: awansaya-portal
     restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
     ports:
       - "3001:3000"
     environment:
       PORT: 3000
       AWANSAYA_API_TOKEN: ${AWANSAYA_API_TOKEN:-}
+      DATABASE_URL: postgres://${AWANSAYA_DB_USER:-awansaya}:${AWANSAYA_DB_PASSWORD:-awansaya-dev-password}@db:5432/${AWANSAYA_DB_NAME:-awansaya}
+
+volumes:
+  awansaya-db-data:
