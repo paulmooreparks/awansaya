@@ -1,6 +1,6 @@
-# HOWTO — Distributed Development Teams (Tela + Awan Satu)
+# HOWTO — Distributed Development Teams (Tela + Awan Saya)
 
-This guide shows how to deploy Tela for a distributed team and use Awan Satu for hub discovery and multi-hub visibility.
+This guide shows how to deploy Tela for a distributed team and use Awan Saya for hub discovery and multi-hub visibility.
 
 ---
 
@@ -29,9 +29,9 @@ For each hub, verify:
 
 ---
 
-## Step 2 — Add hubs to Awan Satu
+## Step 2 — Add hubs to Awan Saya
 
-Edit [awansatu/www/portal/config.json](../www/portal/config.json) and list all hubs:
+Edit [awansaya/www/portal/config.json](../www/portal/config.json) and list all hubs:
 
 ```json
 {
@@ -43,7 +43,7 @@ Edit [awansatu/www/portal/config.json](../www/portal/config.json) and list all h
 }
 ```
 
-Deploy/restart Awan Satu.
+Deploy/restart Awan Saya.
 
 ---
 
@@ -63,7 +63,7 @@ Expose only what the team needs (SSH + DB ports, admin HTTP, etc.).
 On a developer machine:
 
 ```bash
-tela login https://awansatu.net
+tela login https://awansaya.net
 ```
 
 Then connect using hub names:
@@ -80,7 +80,7 @@ tela connect -hub dev -machine dev-db01
 
 Open:
 
-- `https://awansatu.net/portal/`
+- `https://awansaya.net/portal/`
 
 You should see:
 
@@ -94,7 +94,7 @@ You should see:
 
 ### Hub is in config.json but doesn’t appear
 
-- Confirm Awan Satu can serve `config.json` at `/portal/config.json`.
+- Confirm Awan Saya can serve `config.json` at `/portal/config.json`.
 - Confirm the hub URL is reachable from the portal server.
 - Confirm the viewer token in `config.json` is valid.
 

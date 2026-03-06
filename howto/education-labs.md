@@ -1,6 +1,6 @@
-# HOWTO — Education / Lab Environments (Tela + Awan Satu)
+# HOWTO — Education / Lab Environments (Tela + Awan Saya)
 
-This guide shows how to use Awan Satu as the discovery/orchestration layer for multiple lab hubs, making student onboarding simpler.
+This guide shows how to use Awan Saya as the discovery/orchestration layer for multiple lab hubs, making student onboarding simpler.
 
 ---
 
@@ -10,9 +10,9 @@ Make each hub reachable via HTTPS.
 
 ---
 
-## Step 2 — Add hubs to Awan Satu
+## Step 2 — Add hubs to Awan Saya
 
-Update [awansatu/www/portal/config.json](../www/portal/config.json).
+Update [awansaya/www/portal/config.json](../www/portal/config.json).
 
 Example:
 
@@ -25,7 +25,7 @@ Example:
 }
 ```
 
-Deploy/restart Awan Satu.
+Deploy/restart Awan Saya.
 
 ---
 
@@ -40,7 +40,7 @@ Expose RDP/SSH as needed.
 ## Step 4 — Student workflow
 
 ```bash
-tela login https://awansatu.net
+tela login https://awansaya.net
 
 tela machines -hub cs101
 
@@ -53,6 +53,6 @@ tela connect -hub cs101 -machine lab-pc-017
 
 Students can also open:
 
-- `https://awansatu.net/portal/`
+- `https://awansaya.net/portal/`
 
 to see which machines are online and discover the hub console.

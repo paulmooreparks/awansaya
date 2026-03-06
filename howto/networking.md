@@ -1,6 +1,6 @@
 # Networking & reachability
 
-Awan Satu's Portal is a **multi-hub dashboard**. The portal **server** proxies hub status on behalf of the browser - the browser never contacts hubs directly.
+Awan Saya's Portal is a **multi-hub dashboard**. The portal **server** proxies hub status on behalf of the browser - the browser never contacts hubs directly.
 
 ## What must be reachable
 
@@ -14,8 +14,8 @@ For a hub to appear healthy in the portal:
 
 For the Tela CLI to resolve hub names:
 
-- The CLI must be able to fetch `GET https://awansatu.net/api/hubs` (or your self-hosted equivalent).
-- If the Awan Satu server is configured with `AWANSATU_API_TOKEN`, the request must send `Authorization: Bearer <token>`.
+- The CLI must be able to fetch `GET https://awansaya.net/api/hubs` (or your self-hosted equivalent).
+- If the Awan Saya server is configured with `AWANSATU_API_TOKEN`, the request must send `Authorization: Bearer <token>`.
 
 ## Common failure modes
 

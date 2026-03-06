@@ -1,12 +1,12 @@
-# Awan Satu
+# Awan Saya
 
 Multi-hub aggregation portal for [Tela](https://github.com/paulmooreparks/tela).
 
-Awan Satu is the platform layer that sits above one or more Tela hubs, providing:
+Awan Saya is the platform layer that sits above one or more Tela hubs, providing:
 
-- **Landing page** at `awansatu.net/` — product information and download links
-- **Portal** at `awansatu.net/portal/` — multi-hub dashboard aggregating machines, services, and sessions across all registered hubs
-- **Hub API** at `awansatu.net/api/hubs` — hub directory for CLI hub name resolution
+- **Landing page** at `awansaya.net/` — product information and download links
+- **Portal** at `awansaya.net/portal/` — multi-hub dashboard aggregating machines, services, and sessions across all registered hubs
+- **Hub API** at `awansaya.net/api/hubs` — hub directory for CLI hub name resolution
 - **SSO & RBAC** — centralized authentication and access control (planned)
 - **Federation** — any Tela hub exposing the standard API can be registered
 
@@ -14,7 +14,7 @@ Awan Satu is the platform layer that sits above one or more Tela hubs, providing
 
 ```mermaid
 flowchart TB
-  subgraph "awansatu.net"
+  subgraph "awansaya.net"
     LP[Landing Page]
     PD[Portal Dashboard]
     SRV[server.js]
@@ -59,7 +59,7 @@ See also:
 The Tela CLI resolves short hub names via the portal:
 
 ```bash
-tela login https://awansatu.net       # authenticate once
+tela login https://awansaya.net       # authenticate once
 tela machines -hub owlsnest            # hub name resolved via /api/hubs
 tela connect -hub owlsnest -machine barn
 tela logout                            # remove stored credentials
@@ -108,7 +108,7 @@ The portal stores its hub directory in [www/portal/config.json](www/portal/confi
 ```json
 {
   "hubs": [
-    { "name": "owlsnest", "url": "https://tela.awansatu.net", "viewerToken": "<hub-viewer-token>" }
+    { "name": "owlsnest", "url": "https://tela.awansaya.net", "viewerToken": "<hub-viewer-token>" }
   ]
 }
 ```

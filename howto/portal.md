@@ -1,6 +1,6 @@
-# How to configure the Awan Satu portal + hub directory
+# How to configure the Awan Saya portal + hub directory
 
-Awan Satu serves two related things:
+Awan Saya serves two related things:
 
 - the **portal UI** (multi-hub dashboard)
 - the **hub directory API** (`GET /api/hubs`) used by the Tela CLI for hub name resolution
@@ -53,6 +53,6 @@ The portal server proxies hub status. For each hub in the directory, verify that
 
 Alternatively, check the proxy endpoint from a browser:
 
-- `https://awansatu.net/api/hub-status/<name>`
+- `https://awansaya.net/api/hub-status/<name>`
 
 If this returns an error, the hub is unreachable from the portal server or the viewer token is invalid/missing.

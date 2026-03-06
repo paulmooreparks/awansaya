@@ -1,6 +1,6 @@
-# HOWTO — Personal Cloud / Homelab Remote Access (Tela + Awan Satu)
+# HOWTO — Personal Cloud / Homelab Remote Access (Tela + Awan Saya)
 
-This guide shows how to use Awan Satu as the platform layer for Tela so you can:
+This guide shows how to use Awan Saya as the platform layer for Tela so you can:
 
 - Discover hubs by short name (no copying `wss://...` URLs around)
 - Use one portal login for hub name resolution
@@ -13,11 +13,11 @@ It assumes:
 
 ---
 
-## What Awan Satu is doing (today)
+## What Awan Saya is doing (today)
 
-- Awan Satu maintains a hub directory (currently configured via `www/portal/config.json`).
+- Awan Saya maintains a hub directory (currently configured via `www/portal/config.json`).
 - The portal server proxies each hub's `/api/status` and `/api/history` on behalf of the browser, using a stored viewer token per hub.
-- The `tela` CLI can resolve hub names via Awan Satu’s `/api/hubs` endpoint after `tela login`.
+- The `tela` CLI can resolve hub names via Awan Saya’s `/api/hubs` endpoint after `tela login`.
 
 ---
 
@@ -34,11 +34,11 @@ From a browser, verify:
 
 ---
 
-## Step 2 — Add your hub to Awan Satu’s directory
+## Step 2 — Add your hub to Awan Saya’s directory
 
 Edit the hub directory file:
 
-- [awansatu/www/portal/config.json](../www/portal/config.json)
+- [awansaya/www/portal/config.json](../www/portal/config.json)
 
 Add an entry:
 
@@ -52,17 +52,17 @@ Add an entry:
 
 The `viewerToken` is a Tela hub token with the `viewer` role. The portal server uses it to proxy hub status; it is never exposed to the browser.
 
-Deploy/restart Awan Satu.
+Deploy/restart Awan Saya.
 
 Verify the directory API:
 
-- `https://awansatu.net/api/hubs`
+- `https://awansaya.net/api/hubs`
 
 ---
 
 ## Step 3 — (Optional) Require an API token for /api/hubs
 
-Awan Satu supports a simple shared token today.
+Awan Saya supports a simple shared token today.
 
 - If `AWANSATU_API_TOKEN` is **unset**, `/api/hubs` runs in open mode.
 - If `AWANSATU_API_TOKEN` is **set**, clients must send `Authorization: Bearer <token>`.
@@ -73,7 +73,7 @@ Set it in your deployment environment (example):
 export AWANSATU_API_TOKEN="your-long-random-token"
 ```
 
-Restart Awan Satu.
+Restart Awan Saya.
 
 ---
 
@@ -96,7 +96,7 @@ On the machine you want to connect *from*:
 2. Run:
 
 ```bash
-tela login https://awansatu.net
+tela login https://awansaya.net
 ```
 
 - If your portal is in open mode, you can press Enter when prompted for a token.
@@ -122,11 +122,11 @@ tela connect -hub owlsnest -machine barn
 
 ### `tela machines -hub owlsnest` says it can’t resolve the hub
 
-- Confirm `https://awansatu.net/api/hubs` lists the hub.
-- Confirm you logged in: `tela login https://awansatu.net`.
+- Confirm `https://awansaya.net/api/hubs` lists the hub.
+- Confirm you logged in: `tela login https://awansaya.net`.
 - Confirm the hub name matches (case-insensitive match is expected, but keep it consistent).
 
-### Hub appears in Awan Satu but status is failing
+### Hub appears in Awan Saya but status is failing
 
 - Confirm hub `/api/status` is reachable from the portal server.
 - Confirm the viewer token in `config.json` is valid.

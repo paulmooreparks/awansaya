@@ -1,12 +1,12 @@
-# Awan Satu — Use Cases
+# Awan Saya — Use Cases
 
 ## Overview
 
-Awan Satu is the platform layer for [Tela](https://github.com/paulmooreparks/tela). Where Tela provides the raw connectivity fabric (outbound-only encrypted tunnels, zero-install client, protocol-agnostic TCP forwarding), Awan Satu adds the orchestration, identity, and multi-hub management that turns Tela from a tool into a service.
+Awan Saya is the platform layer for [Tela](https://github.com/paulmooreparks/tela). Where Tela provides the raw connectivity fabric (outbound-only encrypted tunnels, zero-install client, protocol-agnostic TCP forwarding), Awan Saya adds the orchestration, identity, and multi-hub management that turns Tela from a tool into a service.
 
-**Tela : Awan Satu :: git : GitHub**
+**Tela : Awan Saya :: git : GitHub**
 
-You can use Tela standalone, just like you can use git without GitHub. Awan Satu makes it easier to manage at scale.
+You can use Tela standalone, just like you can use git without GitHub. Awan Saya makes it easier to manage at scale.
 
 ---
 
@@ -25,19 +25,19 @@ The scenarios below assume one of two common patterns:
 - Useful when targets are locked down (can’t install agents) or when you prefer to centralize the software footprint.
 - Operationally, this is a modern “bastion” pattern: secure when paired with segmentation, allowlists, and strong service auth.
 
-Awan Satu doesn’t require one pattern or the other. It helps teams manage hubs and access consistently regardless of which topology they choose.
+Awan Saya doesn’t require one pattern or the other. It helps teams manage hubs and access consistently regardless of which topology they choose.
 
 ---
 
-## What Awan Satu Adds to Tela
+## What Awan Saya Adds to Tela
 
-| Capability | Tela alone | With Awan Satu |
+| Capability | Tela alone | With Awan Saya |
 |------------|-----------|----------------|
 | **Hub discovery** | Manual — pass full `wss://` URLs or maintain local `hubs.yaml` | `tela login` once, then use short names like `owlsnest` |
 | **Multi-hub view** | Each hub has its own console | Portal aggregates all hubs in one dashboard |
 | **Download distribution** | Build from source or manual download | Landing page with OS detection, GitHub Release integration |
 | **Identity & access** | Per-hub tokens | Centralized auth, portal-scoped access (SSO/RBAC planned) |
-| **Onboarding** | Read docs, configure manually | `tela login https://awansatu.net` → done |
+| **Onboarding** | Read docs, configure manually | `tela login https://awansaya.net` → done |
 
 ---
 
@@ -50,15 +50,15 @@ Awan Satu doesn’t require one pattern or the other. It helps teams manage hubs
 **How-to (at a glance):**
 
 - Publish a hub URL (your hub console/API must be reachable).
-- Add the hub to Awan Satu’s hub directory.
-- On any client machine: download `tela`, run `tela login https://awansatu.net`, then `tela connect -hub <hubName> -machine <machine>`.
+- Add the hub to Awan Saya’s hub directory.
+- On any client machine: download `tela`, run `tela login https://awansaya.net`, then `tela connect -hub <hubName> -machine <machine>`.
 
 Detailed HOWTO: `howto/personal-cloud.md`
 
-**With Tela + Awan Satu:**
+**With Tela + Awan Saya:**
 
 - `telad` on your home machines, outbound to your hub. No port forwarding, no dynamic DNS.
-- Register the hub on Awan Satu. From any machine: download `tela`, `tela login`, `tela connect -hub myhub -machine nas`.
+- Register the hub on Awan Saya. From any machine: download `tela`, `tela login`, `tela connect -hub myhub -machine nas`.
 - The portal shows all your machines and their status across all your hubs.
 
 **Why not alternatives?**
@@ -68,7 +68,7 @@ Detailed HOWTO: `howto/personal-cloud.md`
 | **Tailscale / ZeroTier** | Requires TUN device. Blocked on managed corporate laptops. |
 | **Cloudflare Tunnel** | Awkward for raw TCP (SSH/RDP). |
 | **WireGuard (raw)** | Needs admin/root on both ends, port forwarding, manual key management. |
-| **tela + Awan Satu** | Zero-install, no-admin client. Hub name resolution via portal. One login, connect by name. |
+| **tela + Awan Saya** | Zero-install, no-admin client. Hub name resolution via portal. One login, connect by name. |
 
 ---
 
@@ -79,21 +79,21 @@ Detailed HOWTO: `howto/personal-cloud.md`
 **How-to (at a glance):**
 
 - Run one hub per environment or site.
-- Add all hubs to Awan Satu.
+- Add all hubs to Awan Saya.
 - Onboard users via one portal login; connect by hub name.
 - Choose endpoint-agent vs gateway/bridge per environment constraints.
 
 Detailed HOWTO: `howto/distributed-teams.md`
 
-**With Tela + Awan Satu:**
+**With Tela + Awan Saya:**
 
 - `telad` on each dev machine, registering outbound to team hubs. IT opens no inbound ports.
-- Team lead registers hubs in Awan Satu: "dev", "staging", "prod".
-- New developers: `tela login https://company.awansatu.net` → see all available hubs → `tela connect -hub staging -machine db01`.
+- Team lead registers hubs in Awan Saya: "dev", "staging", "prod".
+- New developers: `tela login https://company.awansaya.net` → see all available hubs → `tela connect -hub staging -machine db01`.
 - **Service-level granularity**: Expose only SSH:22 and Postgres:5432, not the whole network.
 - **Contractor access**: Scope a contractor to one hub. Revoke by removing from the portal. No VPN client to uninstall.
 
-**Awan Satu's role:** Centralized hub directory and access control. Without it, each developer needs URLs and tokens for every hub. With it, one login covers everything.
+**Awan Saya's role:** Centralized hub directory and access control. Without it, each developer needs URLs and tokens for every hub. With it, one login covers everything.
 
 **Why not alternatives?**
 
@@ -112,19 +112,19 @@ Detailed HOWTO: `howto/distributed-teams.md`
 **How-to (at a glance):**
 
 - Deploy a hub per customer/site (or per fleet segment).
-- Add hubs to Awan Satu so techs can discover them by name.
+- Add hubs to Awan Saya so techs can discover them by name.
 - Deploy `telad` on devices (or deploy a site gateway `telad`).
 - Techs use `tela login` once, then connect by hub name.
 
 Detailed HOWTO: `howto/iot-edge.md`
 
-**With Tela + Awan Satu:**
+**With Tela + Awan Saya:**
 
 - `telad` on each device, outbound to a per-customer hub.
-- Awan Satu aggregates all customer hubs. One portal shows every device across every site.
+- Awan Saya aggregates all customer hubs. One portal shows every device across every site.
 - Techs log in to the portal, see status across all deployments, connect to any device by name.
 
-**Awan Satu's role:** Multi-hub aggregation. Each customer site is its own hub; the portal is the single pane of glass. Without it, techs bounce between hub consoles.
+**Awan Saya's role:** Multi-hub aggregation. Each customer site is its own hub; the portal is the single pane of glass. Without it, techs bounce between hub consoles.
 
 **Why not alternatives?**
 
@@ -143,20 +143,20 @@ Detailed HOWTO: `howto/iot-edge.md`
 **How-to (at a glance):**
 
 - Prefer endpoint-agent `telad` on each production VM.
-- Add the production hub(s) to Awan Satu.
+- Add the production hub(s) to Awan Saya.
 - Enforce auth (token now; SSO/RBAC later).
 - Operators connect by hub name; rotate access centrally.
 
 Detailed HOWTO: `howto/production-access.md`
 
-**With Tela + Awan Satu:**
+**With Tela + Awan Saya:**
 
 - `telad` on each VM, exposing only declared ports.
 - Portal provides the team's view of production infrastructure by hub ("us-east", "eu-west").
 - Audit trail via hub history.
 - WireGuard end-to-end — the hub and portal never see plaintext.
 
-**Awan Satu's role:** Named hub resolution and centralized access management. Decommission a machine or revoke a person's access from one place.
+**Awan Saya's role:** Named hub resolution and centralized access management. Decommission a machine or revoke a person's access from one place.
 
 **Why not alternatives?**
 
@@ -175,20 +175,20 @@ Detailed HOWTO: `howto/production-access.md`
 **How-to (at a glance):**
 
 - Create one hub per customer (recommended isolation).
-- Add all customer hubs to Awan Satu.
+- Add all customer hubs to Awan Saya.
 - Onboard techs via portal login; connect by hub name.
 - Use gateway/bridge when endpoints can’t run agents.
 
 Detailed HOWTO: `howto/msp-it-support.md`
 
-**With Tela + Awan Satu:**
+**With Tela + Awan Saya:**
 
 - `telad` on each customer's machines. Each customer can have their own hub.
-- Awan Satu aggregates all customer hubs. The MSP tech logs in and sees everything.
+- Awan Saya aggregates all customer hubs. The MSP tech logs in and sees everything.
 - Customer machines are behind NATs. Outbound-only is essential.
 - Zero-install client — connect from any machine without installing software.
 
-**Awan Satu's role:** This is the MSP's operational dashboard. Without it, the MSP has a hub console per customer. With it, one portal, one login.
+**Awan Saya's role:** This is the MSP's operational dashboard. Without it, the MSP has a hub console per customer. With it, one portal, one login.
 
 **Why not alternatives?**
 
@@ -207,22 +207,22 @@ Detailed HOWTO: `howto/msp-it-support.md`
 **How-to (at a glance):**
 
 - Run a hub per lab/course and register lab machines.
-- Add hubs to Awan Satu so students can discover them by name.
+- Add hubs to Awan Saya so students can discover them by name.
 - Students `tela login` and connect to assigned machines.
 
 Detailed HOWTO: `howto/education-labs.md`
 
-**With Tela + Awan Satu:**
+**With Tela + Awan Saya:**
 
 - `telad` on each lab machine. Students download `tela`, log in to the school's portal, connect to their assigned machine.
 - Portal shows availability and usage across labs.
 - No VPN infrastructure. Works through dorm and home networks.
 
-**Awan Satu's role:** Student onboarding. One URL to log into, one place to find available machines.
+**Awan Saya's role:** Student onboarding. One URL to log into, one place to find available machines.
 
 ---
 
-## Where Tela + Awan Satu Are Uniquely Positioned
+## Where Tela + Awan Saya Are Uniquely Positioned
 
 No existing combination provides all of:
 
@@ -233,4 +233,4 @@ No existing combination provides all of:
 5. **Named hub resolution via portal** — `tela connect -hub owlsnest`, not `wss://10.0.8.14:8443`
 6. **Federated multi-hub portal** — one dashboard for many sites, customers, or environments
 
-Tailscale comes closest but requires system-level installation. Cloudflare Tunnel is HTTP-focused. Teleport and Boundary are enterprise-heavy. MeshCentral is screen-sharing-centric. Tela + Awan Satu occupy the gap between "just use SSH" and "deploy an enterprise zero-trust platform," with a clean separation between the connectivity fabric and the management layer.
+Tailscale comes closest but requires system-level installation. Cloudflare Tunnel is HTTP-focused. Teleport and Boundary are enterprise-heavy. MeshCentral is screen-sharing-centric. Tela + Awan Saya occupy the gap between "just use SSH" and "deploy an enterprise zero-trust platform," with a clean separation between the connectivity fabric and the management layer.

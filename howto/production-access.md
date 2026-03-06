@@ -1,6 +1,6 @@
-# HOWTO — Production Service Access (Tela + Awan Satu)
+# HOWTO — Production Service Access (Tela + Awan Saya)
 
-This guide shows how to use Awan Satu to manage hub discovery/access for production hubs, while Tela provides the secure transport.
+This guide shows how to use Awan Saya to manage hub discovery/access for production hubs, while Tela provides the secure transport.
 
 ---
 
@@ -15,9 +15,9 @@ Ensure each hub is reachable via HTTPS.
 
 ---
 
-## Step 2 — Add production hubs to Awan Satu
+## Step 2 — Add production hubs to Awan Saya
 
-Update [awansatu/www/portal/config.json](../www/portal/config.json):
+Update [awansaya/www/portal/config.json](../www/portal/config.json):
 
 ```json
 {
@@ -27,13 +27,13 @@ Update [awansatu/www/portal/config.json](../www/portal/config.json):
 }
 ```
 
-Deploy/restart Awan Satu.
+Deploy/restart Awan Saya.
 
 ---
 
 ## Step 3 — Require auth for hub directory (recommended)
 
-Set `AWANSATU_API_TOKEN` in the Awan Satu deployment environment.
+Set `AWANSATU_API_TOKEN` in the Awan Saya deployment environment.
 
 This requires `tela` users to provide a token during `tela login`.
 
@@ -50,7 +50,7 @@ Expose only required ports.
 ## Step 5 — Operator workflow
 
 ```bash
-tela login https://awansatu.net
+tela login https://awansaya.net
 
 tela machines -hub prod-us-east
 

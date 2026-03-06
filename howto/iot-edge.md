@@ -1,6 +1,6 @@
-# HOWTO — IoT / Edge Device Management (Tela + Awan Satu)
+# HOWTO — IoT / Edge Device Management (Tela + Awan Saya)
 
-This guide shows how to manage fleets of devices across many sites using Tela for transport and Awan Satu for hub discovery and aggregation.
+This guide shows how to manage fleets of devices across many sites using Tela for transport and Awan Saya for hub discovery and aggregation.
 
 ---
 
@@ -28,9 +28,9 @@ Verify:
 
 ---
 
-## Step 2 — Add all hubs to Awan Satu
+## Step 2 — Add all hubs to Awan Saya
 
-Update [awansatu/www/portal/config.json](../www/portal/config.json):
+Update [awansaya/www/portal/config.json](../www/portal/config.json):
 
 ```json
 {
@@ -41,7 +41,7 @@ Update [awansatu/www/portal/config.json](../www/portal/config.json):
 }
 ```
 
-Deploy/restart Awan Satu.
+Deploy/restart Awan Saya.
 
 ---
 
@@ -61,7 +61,7 @@ Expose SSH (22) and any necessary admin ports.
 On a technician machine:
 
 ```bash
-tela login https://awansatu.net
+tela login https://awansaya.net
 ```
 
 Then connect by hub name:

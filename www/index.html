@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Awan Satu — Connectivity Platform for Tela</title>
+  <title>Awan Saya — Connectivity Platform for Tela</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -198,7 +198,7 @@
 
   <!-- Features -->
   <div class="features" id="features">
-    <h2>Why Awan Satu?</h2>
+    <h2>Why Awan Saya?</h2>
     <p class="features-sub">One platform. All your hubs. Every machine.</p>
     <div class="feature-grid">
       <div class="feature-card">
@@ -245,7 +245,7 @@
             <span class="desc"><a href="#download" style="color:#5ee89e;">Download <code>telahubd</code></a> and run it on a machine reachable by your agents and clients&mdash;a VPS, cloud VM, or an edge box on your network.
             A single command starts the hub:<br>
             <code style="display:inline-block;margin:6px 0;background:rgba(0,0,0,0.2);padding:4px 10px;border-radius:4px;">telahubd</code><br>
-            By default it listens on port 8080 (HTTP+WS) and 41820 (UDP relay). Set <code>HUB_NAME</code> for the portal display name. Then add it to the <a href="/portal/" style="color:#5ee89e;">Awan Satu portal</a> with a short name and URL.</span>
+            By default it listens on port 8080 (HTTP+WS) and 41820 (UDP relay). Set <code>HUB_NAME</code> for the portal display name. Then add it to the <a href="/portal/" style="color:#5ee89e;">Awan Saya portal</a> with a short name and URL.</span>
           </div>
         </li>
         <li>
@@ -257,13 +257,13 @@
         <li>
           <div>
             <strong>Connect from anywhere</strong>
-            <span class="desc">On your workstation, log in to your portal once:<br><code style="display:inline-block;margin:6px 0;background:rgba(0,0,0,0.2);padding:4px 10px;border-radius:4px;">tela login https://awansatu.net</code><br>Then connect using short hub and machine names:<br><code style="display:inline-block;margin:6px 0;background:rgba(0,0,0,0.2);padding:4px 10px;border-radius:4px;">tela connect -hub &lt;hub-name&gt; -machine &lt;machine-name&gt;</code><br>The CLI resolves hub names via the portal, establishes an encrypted WireGuard tunnel, then automatically upgrades to a direct peer-to-peer connection when possible.</span>
+            <span class="desc">On your workstation, log in to your portal once:<br><code style="display:inline-block;margin:6px 0;background:rgba(0,0,0,0.2);padding:4px 10px;border-radius:4px;">tela login https://awansaya.net</code><br>Then connect using short hub and machine names:<br><code style="display:inline-block;margin:6px 0;background:rgba(0,0,0,0.2);padding:4px 10px;border-radius:4px;">tela connect -hub &lt;hub-name&gt; -machine &lt;machine-name&gt;</code><br>The CLI resolves hub names via the portal, establishes an encrypted WireGuard tunnel, then automatically upgrades to a direct peer-to-peer connection when possible.</span>
           </div>
         </li>
         <li>
           <div>
             <strong>Manage from the portal</strong>
-            <span class="desc">Open the <a href="/portal/" style="color:#5ee89e;">Awan Satu portal</a> to see all your hubs, machines, and active sessions in one place. Grant access to teammates without sharing credentials or exposing infrastructure.</span>
+            <span class="desc">Open the <a href="/portal/" style="color:#5ee89e;">Awan Saya portal</a> to see all your hubs, machines, and active sessions in one place. Grant access to teammates without sharing credentials or exposing infrastructure.</span>
           </div>
         </li>
       </ol>
@@ -290,7 +290,7 @@ graph LR
   end
 
   subgraph Platform
-    Portal["Awan Satu<br/><small>portal + dashboard</small>"]
+    Portal["Awan Saya<br/><small>portal + dashboard</small>"]
   end
 
   CLI -- "WireGuard tunnel" --> Hub
@@ -450,7 +450,7 @@ graph LR
   </script>
 
   <footer>
-    <p>Awan Satu &middot; Powered by <a href="https://github.com/paulmooreparks/tela">Tela</a></p>
+    <p>Awan Saya &middot; Powered by <a href="https://github.com/paulmooreparks/tela">Tela</a></p>
     <p style="margin-top:4px;"><a href="https://github.com/paulmooreparks/awansatu">GitHub</a></p>
   </footer>
 

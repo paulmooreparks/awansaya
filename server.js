@@ -1,5 +1,5 @@
 /*
-  Awan Satu — Hub directory & portal server
+  Awan Saya — Hub directory & portal server
 
   Serves the www/ directory on PORT (default 3000).
   Resolves directory requests to index.html.
@@ -267,5 +267,5 @@ function sendFile(filePath, res) {
 
 const server = http.createServer(serve);
 server.listen(PORT, () => {
-  console.log(`[awansatu] listening on :${PORT}`);
+  console.log(`[awansaya] listening on :${PORT}`);
 });
