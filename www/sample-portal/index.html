@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sample Portal — Awan Saya</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      color: #222;
+      line-height: 1.6;
+      background: #f4f5f7;
+    }
+    .topnav {
+      background: #1a1a2e;
+      color: #fff;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      min-height: 56px;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    .topnav .logo { font-weight: 700; font-size: 1.1rem; letter-spacing: 0.5px; text-decoration: none; color: #fff; }
+    .topnav .logo em { color: #5ee89e; font-style: normal; }
+    .topnav nav { display: flex; gap: 16px; font-size: 0.9rem; }
+    .topnav nav a { color: #ccc; text-decoration: none; padding: 4px 0; }
+    .topnav nav a:hover, .topnav nav a.active { color: #fff; border-bottom: 2px solid #5ee89e; }
+    .topnav .spacer { flex: 1; }
+    .topnav .signin-link {
+      color: #ddd; text-decoration: none; font-size: 0.9rem; font-weight: 600;
+      padding: 4px 0; margin-right: 8px;
+    }
+    .topnav .signin-link:hover { color: #fff; border-bottom: 2px solid #5ee89e; }
+    .topnav .cta-nav {
+      background: #5ee89e; color: #1a1a2e; padding: 6px 16px; border-radius: 4px;
+      text-decoration: none; font-weight: 700; font-size: 0.85rem;
+    }
+    .topnav .cta-nav:hover { background: #4dd889; }
+
+    .banner {
+      max-width: 1100px;
+      margin: 20px auto 0;
+      padding: 0 20px;
+    }
+    .banner-inner {
+      background: #eef8f1;
+      border: 1px solid #cfe8d6;
+      color: #245533;
+      border-radius: 10px;
+      padding: 14px 16px;
+      display: flex;
+      gap: 12px;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .banner strong { color: #1f4a2c; }
+    .banner a { color: #1f4a2c; font-weight: 700; }
+
+    .container { max-width: 1100px; margin: 0 auto; padding: 24px 20px; }
+    h1 { font-size: 1.4rem; margin-bottom: 4px; }
+    .page-desc { color: #666; font-size: 0.9rem; margin-bottom: 24px; }
+
+    .stats { display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+    .stat-card {
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 16px 24px;
+      min-width: 160px;
+      flex: 1;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .stat-card .label { font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+    .stat-card .value { font-size: 1.6rem; font-weight: 700; color: #222; margin-top: 4px; }
+    .stat-card .value .online-count { color: #2d7d46; font-size: 1.1rem; font-weight: 600; }
+
+    .card {
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 16px 0;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .card h2 { font-size: 1.05rem; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+
+    .hub-table, .machine-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    .hub-table th, .machine-table th { text-align: left; padding: 8px 12px; border-bottom: 2px solid #e0e0e0; color: #555; font-weight: 600; }
+    .hub-table td, .machine-table td { padding: 8px 12px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
+    .hub-table tr:last-child td, .machine-table tr:last-child td { border-bottom: none; }
+
+    .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; }
+    .dot.green { background: #2d7d46; }
+    .hub-name, .machine-name { font-weight: 600; }
+    .hub-url { color: #888; font-size: 0.8rem; }
+    .machine-meta { font-size: 0.78rem; color: #888; margin-top: 2px; }
+    .machine-meta span { margin-right: 10px; }
+    .service-tag {
+      display: inline-block; background: #e8f5e9; color: #2d7d46;
+      padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;
+      margin: 1px 4px 1px 0; font-weight: 500;
+    }
+    .btn-console {
+      display: inline-block; background: #1a1a2e; color: #fff; border: none;
+      padding: 3px 10px; border-radius: 4px; font-size: 0.78rem;
+      text-decoration: none;
+    }
+    .btn-console:hover { background: #333; }
+
+    .history-list { list-style: none; padding: 0; font-size: 0.85rem; max-height: 280px; overflow-y: auto; }
+    .history-list li { padding: 4px 0; border-bottom: 1px solid #f0f0f0; display: flex; gap: 12px; flex-wrap: wrap; }
+    .history-list li:last-child { border-bottom: none; }
+    .history-time { color: #aaa; min-width: 80px; }
+    .history-hub { color: #555; min-width: 80px; font-size: 0.8rem; }
+    .history-machine { font-weight: 600; color: #2d7d46; min-width: 80px; }
+    .history-event { color: #555; }
+    .history-detail { color: #888; }
+    .last-updated { color: #aaa; font-size: 0.8rem; margin-top: 8px; }
+
+    footer { margin-top: 40px; color: #999; font-size: 0.85rem; text-align: center; padding: 0 20px 24px; }
+    footer a { color: #666; text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    @media (max-width: 760px) {
+      .topnav { padding: 12px 16px; }
+      .topnav nav { width: 100%; order: 3; }
+      .topnav .spacer { display: none; }
+      .banner-inner { align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <div class="topnav">
+    <a href="/" class="logo"><em>Awan</em>Saya</a>
+    <nav>
+      <a href="/sample-portal/" class="active">Sample Portal</a>
+      <a href="/sample-portal/#hubs">Hubs</a>
+      <a href="/sample-portal/#machines">Machines</a>
+    </nav>
+    <div class="spacer"></div>
+    <a href="/sign-in/?next=%2Fportal%2F" class="signin-link">Sign In</a>
+    <a href="/portal/" class="cta-nav">Open Your Portal</a>
+  </div>
+
+  <div class="banner">
+    <div class="banner-inner">
+      <div>
+        <strong>Sample Portal</strong> — this is a static snapshot of a real Awan Saya dashboard using sample data.
+      </div>
+      <div>
+        <a href="/sign-in/?next=%2Fportal%2F">Sign in to see your live portal</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <h1>Dashboard</h1>
+    <p class="page-desc">Multi-hub management for Tela connectivity fabric</p>
+
+    <div class="stats">
+      <div class="stat-card">
+        <div class="label">Hubs (Online)</div>
+        <div class="value">1 <span class="online-count">(1)</span></div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Machines (Online)</div>
+        <div class="value">1 <span class="online-count">(1)</span></div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Services (Active)</div>
+        <div class="value">2 <span class="online-count">(1)</span></div>
+      </div>
+    </div>
+
+    <div class="card" id="hubs">
+      <h2>🖧 Hubs</h2>
+      <table class="hub-table">
+        <thead>
+          <tr><th>Hub</th><th>Status</th><th>Machines</th><th>Online</th><th>Sessions</th><th></th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <span class="hub-name">gohub</span><br>
+              <span class="hub-url">https://gohub.parkscomputing.com</span>
+              <div class="machine-meta"><span>linux/amd64</span><span>💻 262f80611647</span></div>
+            </td>
+            <td><span class="dot green"></span> Online</td>
+            <td>1</td>
+            <td>1</td>
+            <td>1</td>
+            <td><a class="btn-console" href="https://gohub.parkscomputing.com/" target="_blank" rel="noreferrer">↗ Console</a></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card" id="machines">
+      <h2>💻 All Machines</h2>
+      <table class="machine-table">
+        <thead>
+          <tr><th>Machine</th><th>Hub</th><th>Status</th><th>Services</th><th>Last seen</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <div class="machine-name">BARN</div>
+              <div class="machine-meta"><span>💻 barn</span><span>windows</span><span>v0.1.36</span></div>
+            </td>
+            <td>gohub</td>
+            <td><span class="dot green"></span> Online</td>
+            <td><span class="service-tag">SSH :22</span><span class="service-tag">RDP :3389</span></td>
+            <td>7s ago</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="last-updated">Snapshot captured from a live portal session.</p>
+    </div>
+
+    <div class="card">
+      <h2>📈 Recent Activity</h2>
+      <ul class="history-list">
+        <li><span class="history-time">1h ago</span><span class="history-hub">gohub</span><span class="history-machine">barn</span><span class="history-event">client-connect <span class="history-detail">(SSH:22,RDP:3389)</span></span></li>
+        <li><span class="history-time">1h ago</span><span class="history-hub">gohub</span><span class="history-machine">barn</span><span class="history-event">✅ Machine registered <span class="history-detail">(ports=[22 3389])</span></span></li>
+        <li><span class="history-time">2h ago</span><span class="history-hub">gohub</span><span class="history-machine">barn</span><span class="history-event">🔌 Session ended <span class="history-detail">(client disconnected)</span></span></li>
+        <li><span class="history-time">2h ago</span><span class="history-hub">gohub</span><span class="history-machine">barn</span><span class="history-event">agent-session-disconnect <span class="history-detail">(SSH:22,RDP:3389)</span></span></li>
+        <li><span class="history-time">2h ago</span><span class="history-hub">gohub</span><span class="history-machine">barn</span><span class="history-event">❌ Machine disconnected <span class="history-detail">(agent disconnected)</span></span></li>
+        <li><span class="history-time">3h ago</span><span class="history-hub">gohub</span><span class="history-machine">barn</span><span class="history-event">client-connect <span class="history-detail">(SSH:22,RDP:3389)</span></span></li>
+        <li><span class="history-time">4h ago</span><span class="history-hub">gohub</span><span class="history-machine">barn</span><span class="history-event">✅ Machine registered <span class="history-detail">(ports=[22 3389])</span></span></li>
+      </ul>
+    </div>
+  </div>
+
+  <footer>
+    <p>Awan Saya · Powered by <a href="https://github.com/paulmooreparks/tela">Tela</a></p>
+    <p style="margin-top:4px;"><a href="https://github.com/paulmooreparks/awansaya">GitHub</a></p>
+  </footer>
+</body>
+</html>

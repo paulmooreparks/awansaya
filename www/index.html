@@ -36,6 +36,7 @@
     .topnav .signin-link:hover { color: #fff; border-bottom: 2px solid #5ee89e; }
     .topnav .cta-nav { background: #5ee89e; color: #1a1a2e; padding: 6px 16px; border-radius: 4px; text-decoration: none; font-weight: 600; font-size: 0.85rem; }
     .topnav .cta-nav:hover { background: #4dd889; }
+    .hidden { display: none !important; }
 
     /* Hero */
     .hero {
@@ -182,11 +183,11 @@
       <a href="#features">Features</a>
       <a href="#how-it-works">How It Works</a>
       <a href="#download">Download</a>
-      <a href="/portal/">Portal</a>
+      <a id="portal-nav-link" href="/sample-portal/">Sample Portal</a>
     </nav>
     <div class="spacer"></div>
-    <a href="/sign-in/?next=%2Fportal%2F" class="signin-link">Sign In</a>
-    <a href="/portal/" class="cta-nav">Open Portal</a>
+    <a id="signin-link" href="/sign-in/?next=%2Fportal%2F" class="signin-link">Sign In</a>
+    <a id="portal-cta-link" href="/sample-portal/" class="cta-nav">Sample Portal</a>
   </div>
 
   <!-- Hero -->
@@ -197,7 +198,7 @@
       and encrypted tunnels across all your hubs from a single dashboard.
     </p>
     <div class="cta-row">
-      <a href="/portal/" class="btn-primary">Open Portal</a>
+      <a id="hero-portal-link" href="/sample-portal/" class="btn-primary">Sample Portal</a>
       <a href="#download" class="btn-secondary">Download Tela CLI</a>
     </div>
   </div>
@@ -394,6 +395,68 @@ graph LR
   </div>
 
   <script>
+  // ── Landing page auth-aware chrome ─────────────────────────────
+  (function () {
+    var SIGN_IN_URL = '/sign-in/?next=%2Fportal%2F';
+    var SAMPLE_PORTAL_URL = '/sample-portal/';
+    var REAL_PORTAL_URL = '/portal/';
+
+    function setPortalLinks(url, label) {
+      var nav = document.getElementById('portal-nav-link');
+      var cta = document.getElementById('portal-cta-link');
+      var hero = document.getElementById('hero-portal-link');
+      if (nav) {
+        nav.href = url;
+        nav.textContent = label;
+      }
+      if (cta) {
+        cta.href = url;
+        cta.textContent = label;
+      }
+      if (hero) {
+        hero.href = url;
+        hero.textContent = label;
+      }
+    }
+
+    function setSignedInChrome(user) {
+      var signIn = document.getElementById('signin-link');
+      if (signIn) {
+        signIn.classList.add('hidden');
+      }
+      setPortalLinks(REAL_PORTAL_URL, 'Open Portal');
+      var cta = document.getElementById('portal-cta-link');
+      if (cta && user && user.displayName) {
+        cta.title = 'Signed in as ' + user.displayName;
+      }
+    }
+
+    function setSignedOutChrome() {
+      var signIn = document.getElementById('signin-link');
+      if (signIn) {
+        signIn.href = SIGN_IN_URL;
+        signIn.textContent = 'Sign In';
+        signIn.classList.remove('hidden');
+      }
+      setPortalLinks(SAMPLE_PORTAL_URL, 'Sample Portal');
+    }
+
+    setSignedOutChrome();
+
+    fetch('/api/auth-mode')
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data && data.authenticated) {
+          setSignedInChrome(data.user || null);
+        } else {
+          setSignedOutChrome();
+        }
+      })
+      .catch(function () {
+        setSignedOutChrome();
+      });
+  })();
+
   // ── Release version + hashes from GitHub ────────────────────────
   (function () {
     var REPO = 'paulmooreparks/tela';

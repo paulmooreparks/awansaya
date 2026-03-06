@@ -358,6 +358,23 @@ function jsonOK(res, obj) {
   res.end(JSON.stringify(obj));
 }
 
+function redirectToSignIn(req, res) {
+  const next = encodeURIComponent(req.url || '/portal/');
+  res.writeHead(302, { Location: `/sign-in/?next=${next}` });
+  res.end();
+}
+
+async function requireAuthenticated(req, res, options) {
+  const user = await getSessionUser(req, true);
+  if (user) return user;
+  if (options && options.redirect) {
+    redirectToSignIn(req, res);
+  } else {
+    jsonError(res, 401, 'authentication required');
+  }
+  return null;
+}
+
 function readBody(req, cb) {
   let body = '';
   req.on('data', chunk => { body += chunk; if (body.length > 1e6) req.destroy(); });
@@ -498,6 +515,8 @@ function proxyFetch(targetUrl) {
 // GET /api/hub-status/<name> — proxy to hub's /api/status with viewer token
 async function apiHubStatus(req, res, hubName) {
   try {
+    const user = await requireAuthenticated(req, res);
+    if (!user) return;
     const hub = await lookupHub(hubName);
     if (!hub) return jsonError(res, 404, 'hub not found');
 
@@ -515,6 +534,8 @@ async function apiHubStatus(req, res, hubName) {
 // GET /api/hub-history/<name> — proxy to hub's /api/history with viewer token
 async function apiHubHistory(req, res, hubName) {
   try {
+    const user = await requireAuthenticated(req, res);
+    if (!user) return;
     const hub = await lookupHub(hubName);
     if (!hub) return jsonError(res, 404, 'hub not found');
 
@@ -534,6 +555,11 @@ async function apiHubHistory(req, res, hubName) {
 async function serve(req, res) {
   const method  = req.method;
   const urlPath = decodeURIComponent(req.url.split('?')[0]);
+
+	if (urlPath === '/portal' || urlPath.startsWith('/portal/')) {
+		const user = await requireAuthenticated(req, res, { redirect: true });
+		if (!user) return;
+	}
 
   // API routes
   if (urlPath === '/api/auth-mode') {
