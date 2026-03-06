@@ -47,7 +47,7 @@ Common requirements:
 |----------|--------------|---------------|------|
 | **Hub** (`hub.js`) | TCP 443 (recommended) for HTTPS + WebSockets | none special | Optional: UDP 41820 for UDP relay. Must expose `/api/status` + `/api/history` for portal cards/metrics. |
 | **Portal (static site)** | TCP 80/443 to serve the portal | n/a | Browser then directly fetches each Hub’s API. |
-| **Portal server** (`server.js`) | TCP 80/443 to serve `/api/hubs` | n/a | Directory may require `Authorization: Bearer <token>` when `AWANSATU_API_TOKEN` is set. |
+| **Portal server** (`server.js`) | TCP 80/443 to serve `/api/hubs` | n/a | Reading the directory is always open. Adding/removing hubs requires `Authorization: Bearer <token>` when `AWANSAYA_API_TOKEN` is set. |
 
 See also:
 
@@ -69,7 +69,7 @@ tela logout                            # remove stored credentials
 
 ### `GET /api/hubs`
 
-Returns the hub directory (viewer tokens are stripped from the response). Requires `Authorization: Bearer <token>` when `AWANSATU_API_TOKEN` is set on the server; open mode otherwise.
+Returns the hub directory (viewer tokens are stripped from the response). Always open — no authentication required.
 
 ```json
 {
@@ -81,7 +81,7 @@ Returns the hub directory (viewer tokens are stripped from the response). Requir
 
 ### `POST /api/hubs`
 
-Add a hub to the directory. Requires `Authorization: Bearer <token>` when `AWANSATU_API_TOKEN` is set.
+Add a hub to the directory. Requires `Authorization: Bearer <token>` when `AWANSAYA_API_TOKEN` is set.
 
 ```json
 { "name": "owlsnest", "url": "https://owlsnest-hub.parkscomputing.com", "viewerToken": "<token>" }
@@ -89,7 +89,11 @@ Add a hub to the directory. Requires `Authorization: Bearer <token>` when `AWANS
 
 ### `DELETE /api/hubs/:name`
 
-Remove a hub from the directory. Requires `Authorization: Bearer <token>` when `AWANSATU_API_TOKEN` is set.
+Remove a hub from the directory. Requires `Authorization: Bearer <token>` when `AWANSAYA_API_TOKEN` is set.
+
+### `GET /api/auth-mode`
+
+Returns `{ "manageLocked": true }` when `AWANSAYA_API_TOKEN` is set, or `{ "manageLocked": false }` in open mode. Used by the portal UI to hide management controls.
 
 ### `GET /api/hub-status/:name`
 
@@ -118,7 +122,7 @@ The portal stores its hub directory in [www/portal/config.json](www/portal/confi
 - `viewerToken` is a Tela hub token with the `viewer` role. The portal server uses it to authenticate when proxying `/api/status` and `/api/history` from the hub. This token is never exposed to the browser.
 - The Tela CLI converts `https://` → `wss://` (and `http://` → `ws://`) when resolving hub names via the portal.
 
-To protect `/api/hubs`, set `AWANSATU_API_TOKEN` on the portal server and use `Authorization: Bearer <token>` from the CLI (`tela login`).
+To protect hub management, set `AWANSAYA_API_TOKEN` on the portal server (via a `.env` file — do not commit the token). Reading the hub directory (`GET /api/hubs`) is always open. Adding and removing hubs (`POST`/`DELETE`) require `Authorization: Bearer <token>`.
 
 ## Development
 

@@ -239,6 +239,7 @@
     // Add and remove operations go through POST/DELETE /api/hubs.
 
     var HUBS = [];
+    var MANAGE_LOCKED = false;  // true when AWANSAYA_API_TOKEN is set on server
 
     function fetchHubList() {
       return fetch('/api/hubs')
@@ -253,8 +254,22 @@
         });
     }
 
+    function fetchAuthMode() {
+      return fetch('/api/auth-mode')
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          MANAGE_LOCKED = !!(data && data.manageLocked);
+        })
+        .catch(function () { MANAGE_LOCKED = false; });
+    }
+
     function boot() {
-      fetchHubList().then(function () { initDashboard(); });
+      Promise.all([fetchHubList(), fetchAuthMode()]).then(function () {
+        if (MANAGE_LOCKED) {
+          document.getElementById('add-hub-form').style.display = 'none';
+        }
+        initDashboard();
+      });
     }
 
     function initDashboard() {
@@ -400,7 +415,7 @@
           : '<span class="dot red"></span> Unreachable';
 
         var consoleLink = '<a class="btn-console" href="' + escHtml(r.hub.url) + '/" target="_blank">\u2197 Console</a>';
-        var removeBtn = '<button class="btn-remove" onclick="removeHub(' + idx + ')" title="Remove hub">\u2716</button>';
+        var removeBtn = MANAGE_LOCKED ? '' : '<button class="btn-remove" onclick="removeHub(' + idx + ')" title="Remove hub">\u2716</button>';
 
         var hubMeta = [];
         var hi = r.data.hub || {};

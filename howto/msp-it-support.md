@@ -38,7 +38,7 @@ Deploy/restart Awan Saya.
 
 ## Step 3 — (Recommended) enforce auth
 
-Set `AWANSATU_API_TOKEN` so that `/api/hubs` requires a token.
+Set `AWANSAYA_API_TOKEN` in a `.env` file so that adding/removing hubs requires a token. Reading the hub directory remains open.
 
 ---
 

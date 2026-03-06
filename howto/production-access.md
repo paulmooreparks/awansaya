@@ -33,9 +33,9 @@ Deploy/restart Awan Saya.
 
 ## Step 3 — Require auth for hub directory (recommended)
 
-Set `AWANSATU_API_TOKEN` in the Awan Saya deployment environment.
+Set `AWANSAYA_API_TOKEN` in a `.env` file (never committed) next to `docker-compose.yml`.
 
-This requires `tela` users to provide a token during `tela login`.
+The hub directory is always readable. Adding/removing hubs and `tela login` require the token.
 
 ---
 

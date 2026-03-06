@@ -34,12 +34,12 @@ Notes:
 
 ## Verify `/api/hubs`
 
-- In open mode (no token), confirm `GET /api/hubs` returns the JSON directory.
-- In token mode, confirm requests include `Authorization: Bearer <token>`.
+- `GET /api/hubs` is always open — confirm it returns the JSON directory.
+- In token mode, `POST` and `DELETE` requests must include `Authorization: Bearer <token>`.
 
 Token mode is enabled by setting:
 
-- `AWANSATU_API_TOKEN` (server-side environment variable)
+- `AWANSAYA_API_TOKEN` (in a `.env` file next to `docker-compose.yml` — never committed)
 
 ## Verify portal-to-hub visibility
 

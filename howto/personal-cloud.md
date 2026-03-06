@@ -60,17 +60,18 @@ Verify the directory API:
 
 ---
 
-## Step 3 — (Optional) Require an API token for /api/hubs
+## Step 3 — (Optional) Require an API token for hub management
 
 Awan Saya supports a simple shared token today.
 
-- If `AWANSATU_API_TOKEN` is **unset**, `/api/hubs` runs in open mode.
-- If `AWANSATU_API_TOKEN` is **set**, clients must send `Authorization: Bearer <token>`.
+- Reading the hub directory (`GET /api/hubs`) is always open — no token needed.
+- If `AWANSAYA_API_TOKEN` is **set**, adding/removing hubs (`POST`/`DELETE /api/hubs`) requires `Authorization: Bearer <token>`.
+- If `AWANSAYA_API_TOKEN` is **unset**, management is also open.
 
-Set it in your deployment environment (example):
+Create a `.env` file next to `docker-compose.yml` (never commit this file):
 
 ```bash
-export AWANSATU_API_TOKEN="your-long-random-token"
+AWANSAYA_API_TOKEN="your-long-random-token"
 ```
 
 Restart Awan Saya.
@@ -99,8 +100,8 @@ On the machine you want to connect *from*:
 tela login https://awansaya.net
 ```
 
-- If your portal is in open mode, you can press Enter when prompted for a token.
-- If your portal enforces `AWANSATU_API_TOKEN`, paste the token.
+- If your portal enforces `AWANSAYA_API_TOKEN`, paste the token when prompted.
+- If your portal is in open mode, you can press Enter to skip.
 
 3. List machines by hub name:
 

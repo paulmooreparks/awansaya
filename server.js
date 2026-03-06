@@ -18,7 +18,7 @@ const url   = require('url');
 
 const PORT          = parseInt(process.env.PORT || '3000', 10);
 const WWW_DIR       = path.join(__dirname, 'www');
-const API_TOKEN     = process.env.AWANSATU_API_TOKEN || '';   // empty = open mode
+const API_TOKEN     = process.env.AWANSAYA_API_TOKEN || '';   // empty = open mode
 const CONFIG_PATH   = path.join(WWW_DIR, 'portal', 'config.json');
 
 const MIME = {
@@ -79,9 +79,14 @@ function readBody(req, cb) {
   });
 }
 
+// GET /api/auth-mode — tell the browser whether management is locked
+function apiAuthMode(req, res) {
+  jsonOK(res, { manageLocked: !!API_TOKEN });
+}
+
 // GET /api/hubs — return the hub list from portal/config.json (tokens stripped)
+// Always open: the response is read-only (viewer tokens are stripped).
 function apiGetHubs(req, res) {
-  if (!checkAuth(req, res)) return;
   readConfig((err, cfg) => {
     if (err) return jsonError(res, 500, 'config not found');
     // Strip viewerToken so it never reaches the browser
@@ -213,6 +218,10 @@ function serve(req, res) {
   const urlPath = decodeURIComponent(req.url.split('?')[0]);
 
   // API routes
+  if (urlPath === '/api/auth-mode') {
+    if (method === 'GET' || method === 'HEAD') return apiAuthMode(req, res);
+    res.writeHead(405); res.end(); return;
+  }
   if (urlPath === '/api/hubs') {
     if (method === 'GET' || method === 'HEAD') return apiGetHubs(req, res);
     if (method === 'POST')   return apiAddHub(req, res);

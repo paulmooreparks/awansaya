@@ -14,8 +14,8 @@ For a hub to appear healthy in the portal:
 
 For the Tela CLI to resolve hub names:
 
-- The CLI must be able to fetch `GET https://awansaya.net/api/hubs` (or your self-hosted equivalent).
-- If the Awan Saya server is configured with `AWANSATU_API_TOKEN`, the request must send `Authorization: Bearer <token>`.
+- The CLI must be able to fetch `GET https://awansaya.net/api/hubs` (or your self-hosted equivalent). This endpoint is always open.
+- If the Awan Saya server is configured with `AWANSAYA_API_TOKEN`, hub management operations (`POST`/`DELETE /api/hubs`) require `Authorization: Bearer <token>`.
 
 ## Common failure modes
 
