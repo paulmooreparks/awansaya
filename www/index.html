@@ -4,185 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Awan Saya — Connectivity Platform for Tela</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: system-ui, -apple-system, sans-serif;
-      color: #222;
-      line-height: 1.6;
-      background: #fafafa;
-    }
-
-    /* Top nav */
-    .topnav {
-      background: #1a1a2e;
-      color: #fff;
-      padding: 0 24px;
-      display: flex;
-      align-items: center;
-      height: 56px;
-      gap: 24px;
-    }
-    .topnav .logo { font-weight: 700; font-size: 1.2rem; letter-spacing: 0.5px; text-decoration: none; color: #fff; }
-    .topnav .logo em { color: #5ee89e; font-style: normal; }
-    .topnav nav { display: flex; gap: 16px; font-size: 0.9rem; }
-    .topnav nav a { color: #ccc; text-decoration: none; padding: 4px 0; }
-    .topnav nav a:hover { color: #fff; border-bottom: 2px solid #5ee89e; }
-    .topnav .spacer { flex: 1; }
-    .topnav .signin-link {
-      color: #ddd; text-decoration: none; font-size: 0.9rem; font-weight: 600;
-      padding: 4px 0; margin-right: 8px;
-    }
-    .topnav .signin-link:hover { color: #fff; border-bottom: 2px solid #5ee89e; }
-    .topnav .user-area {
-      display: flex; align-items: center; gap: 12px; font-size: 0.85rem; color: #aaa;
-    }
-    .topnav .user-area .avatar {
-      width: 30px; height: 30px; border-radius: 50%; background: #5ee89e; color: #1a1a2e;
-      display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem;
-    }
-    .topnav .user-area button {
-      background: transparent; color: #ddd; border: 1px solid #445; border-radius: 4px;
-      padding: 4px 10px; cursor: pointer; font-size: 0.8rem;
-    }
-    .topnav .user-area button:hover { color: #fff; border-color: #5ee89e; }
-    .topnav .cta-nav { background: #5ee89e; color: #1a1a2e; padding: 6px 16px; border-radius: 4px; text-decoration: none; font-weight: 600; font-size: 0.85rem; }
-    .topnav .cta-nav:hover { background: #4dd889; }
-    .hidden { display: none !important; }
-
-    /* Hero */
-    .hero {
-      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-      color: #fff;
-      text-align: center;
-      padding: 80px 24px 60px;
-    }
-    .hero h1 { font-size: 2.8rem; font-weight: 800; margin-bottom: 16px; }
-    .hero h1 em { color: #5ee89e; font-style: normal; }
-    .hero .tagline { font-size: 1.2rem; color: #b8c4d0; max-width: 640px; margin: 0 auto 32px; }
-    .hero .cta-row { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
-    .btn-primary {
-      display: inline-block; background: #5ee89e; color: #1a1a2e; padding: 12px 28px;
-      border-radius: 6px; text-decoration: none; font-weight: 700; font-size: 1rem;
-      transition: background 0.15s;
-    }
-    .btn-primary:hover { background: #4dd889; }
-    .btn-secondary {
-      display: inline-block; background: transparent; color: #fff; padding: 12px 28px;
-      border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 1rem;
-      border: 2px solid rgba(255,255,255,0.3); transition: border-color 0.15s;
-    }
-    .btn-secondary:hover { border-color: #5ee89e; color: #5ee89e; }
-
-    /* Features */
-    .features {
-      max-width: 1000px;
-      margin: 0 auto;
-      padding: 60px 24px;
-    }
-    .features h2 { text-align: center; font-size: 1.6rem; margin-bottom: 8px; }
-    .features .features-sub { text-align: center; color: #666; margin-bottom: 40px; }
-    .feature-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 24px;
-    }
-    .feature-card {
-      background: #fff;
-      border: 1px solid #e0e0e0;
-      border-radius: 10px;
-      padding: 28px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-    }
-    .feature-card .icon { font-size: 1.8rem; margin-bottom: 12px; }
-    .feature-card h3 { font-size: 1.05rem; margin-bottom: 8px; }
-    .feature-card p { color: #666; font-size: 0.9rem; }
-
-    /* How it works */
-    .how-it-works {
-      background: #fff;
-      border-top: 1px solid #e8e8e8;
-      border-bottom: 1px solid #e8e8e8;
-      padding: 60px 24px;
-    }
-    .how-it-works .container { max-width: 800px; margin: 0 auto; }
-    .how-it-works h2 { text-align: center; font-size: 1.4rem; margin-bottom: 32px; }
-    .steps { list-style: none; counter-reset: step; }
-    .steps li {
-      counter-increment: step;
-      display: flex;
-      align-items: flex-start;
-      gap: 16px;
-      margin-bottom: 20px;
-      font-size: 0.95rem;
-    }
-    .steps li::before {
-      content: counter(step);
-      display: flex; align-items: center; justify-content: center;
-      min-width: 36px; height: 36px; border-radius: 50%;
-      background: #1a1a2e; color: #5ee89e; font-weight: 700; font-size: 0.95rem;
-    }
-    .steps li strong { display: block; margin-bottom: 2px; }
-    .steps li .desc { color: #555; }
-
-    /* Architecture */
-    .architecture {
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 60px 24px;
-      text-align: center;
-    }
-    .architecture h2 { font-size: 1.4rem; margin-bottom: 24px; }
-    .mermaid-wrap {
-      background: #1a1a2e;
-      padding: 32px 24px;
-      border-radius: 10px;
-      overflow-x: auto;
-    }
-    .mermaid-wrap .mermaid svg { max-width: 100%; height: auto; }
-
-    /* Download */
-    .download {
-      background: linear-gradient(135deg, #16213e 0%, #1a1a2e 100%);
-      color: #fff;
-      text-align: center;
-      padding: 60px 24px;
-    }
-    .download h2 { font-size: 1.6rem; margin-bottom: 8px; }
-    .download .download-sub { color: #b8c4d0; margin-bottom: 32px; }
-    .download-grid { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
-    .dl-card {
-      background: rgba(255,255,255,0.08);
-      border: 1px solid rgba(255,255,255,0.15);
-      border-radius: 8px;
-      padding: 20px 28px;
-      min-width: 160px;
-      text-decoration: none;
-      color: #fff;
-      transition: background 0.15s;
-    }
-    .dl-card:hover { background: rgba(255,255,255,0.14); }
-    .dl-card .dl-icon { font-size: 1.6rem; margin-bottom: 8px; }
-    .dl-card .dl-label { font-weight: 600; }
-    .dl-card .dl-binary { color: #5ee89e; font-size: 0.85rem; font-family: monospace; }
-    .dl-card .dl-hash { color: rgba(255,255,255,0.45); font-size: 0.65rem; font-family: monospace; word-break: break-all; margin-top: 4px; }
-    .release-banner { color: #b8c4d0; font-size: 0.9rem; margin-bottom: 24px; }
-    .release-banner a { color: #5ee89e; text-decoration: underline; }
-    .release-banner .release-tag { font-weight: 700; color: #5ee89e; }
-    .verify-note { color: #8898a8; font-size: 0.8rem; max-width: 600px; margin: 24px auto 0; }
-    .verify-note a { color: #5ee89e; }
-    .verify-note code { background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 3px; }
-
-    /* Footer */
-    footer {
-      text-align: center;
-      padding: 32px 24px;
-      color: #999;
-      font-size: 0.85rem;
-    }
-    footer a { color: #666; text-decoration: none; }
-    footer a:hover { text-decoration: underline; }
-  </style>
+  <link rel="stylesheet" href="/assets/styles/common.css">
+  <link rel="stylesheet" href="/assets/styles/landing.css">
   <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
   <script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
 </head>
@@ -195,7 +18,6 @@
       <a href="#features">Features</a>
       <a href="#how-it-works">How It Works</a>
       <a href="#download">Download</a>
-      <a id="portal-nav-link" href="/sample-portal/">Sample Portal</a>
     </nav>
     <div class="spacer"></div>
     <a id="signin-link" href="/sign-in/?next=%2Fportal%2F" class="signin-link">Sign In</a>
@@ -211,7 +33,7 @@
   <div class="hero">
     <h1><em>Awan</em> Saya</h1>
     <p class="tagline">
-      The connectivity platform for <a href="https://github.com/paulmooreparks/tela" style="color:#5ee89e;text-decoration:underline;"><strong>Tela</strong></a>. Manage machines, services,
+      The connectivity platform for <a href="https://github.com/paulmooreparks/tela" class="accent-link"><strong>Tela</strong></a>. Manage machines, services,
       and encrypted tunnels across all your hubs from a single dashboard.
     </p>
     <div class="cta-row">
@@ -266,33 +88,33 @@
         <li>
           <div>
             <strong>Deploy a hub (relay) and register it</strong>
-            <span class="desc"><a href="#download" style="color:#5ee89e;">Download <code>telahubd</code></a> and run it on a machine reachable by your agents and clients&mdash;a VPS, cloud VM, or an edge box on your network.
+            <span class="desc"><a href="#download" class="accent-link">Download <code>telahubd</code></a> and run it on a machine reachable by your agents and clients&mdash;a VPS, cloud VM, or an edge box on your network.
             A single command starts the hub:<br>
-            <code style="display:inline-block;margin:6px 0;background:rgba(0,0,0,0.2);padding:4px 10px;border-radius:4px;">telahubd</code><br>
-            By default it listens on port 8080 (HTTP+WS) and 41820 (UDP relay). Set <code>HUB_NAME</code> for the portal display name. Then add it to the <a href="/portal/" style="color:#5ee89e;">Awan Saya portal</a> with a short name and URL.</span>
+            <code class="code-inline">telahubd</code><br>
+            By default it listens on port 8080 (HTTP+WS) and 41820 (UDP relay). Set <code>HUB_NAME</code> for the portal display name. Then add it to the <a href="/portal/" class="accent-link">Awan Saya portal</a> with a short name and URL.</span>
           </div>
         </li>
         <li>
           <div>
             <strong>Install the agent on each machine</strong>
-            <span class="desc"><a href="#download" style="color:#5ee89e;">Download <code>telad</code></a> and run it on every machine you want to access remotely. It connects to your hub and advertises the machine&rsquo;s services&mdash;SSH, RDP, HTTP, or any TCP port.</span>
+            <span class="desc"><a href="#download" class="accent-link">Download <code>telad</code></a> and run it on every machine you want to access remotely. It connects to your hub and advertises the machine&rsquo;s services&mdash;SSH, RDP, HTTP, or any TCP port.</span>
           </div>
         </li>
         <li>
           <div>
             <strong>Connect from anywhere</strong>
-            <span class="desc">On your workstation, log in to your portal once:<br><code style="display:inline-block;margin:6px 0;background:rgba(0,0,0,0.2);padding:4px 10px;border-radius:4px;">tela login https://awansaya.net</code><br>Then connect using short hub and machine names:<br><code style="display:inline-block;margin:6px 0;background:rgba(0,0,0,0.2);padding:4px 10px;border-radius:4px;">tela connect -hub &lt;hub-name&gt; -machine &lt;machine-name&gt;</code><br>The CLI resolves hub names via the portal, establishes an encrypted WireGuard tunnel, then automatically upgrades to a direct peer-to-peer connection when possible.</span>
+            <span class="desc">On your workstation, log in to your portal once:<br><code class="code-inline">tela login https://awansaya.net</code><br>Then connect using short hub and machine names:<br><code class="code-inline">tela connect -hub &lt;hub-name&gt; -machine &lt;machine-name&gt;</code><br>The CLI resolves hub names via the portal, establishes an encrypted WireGuard tunnel, then automatically upgrades to a direct peer-to-peer connection when possible.</span>
           </div>
         </li>
         <li>
           <div>
             <strong>Manage from the portal</strong>
-            <span class="desc">Open the <a href="/portal/" style="color:#5ee89e;">Awan Saya portal</a> to see all your hubs, machines, and active sessions in one place. Grant access to teammates without sharing credentials or exposing infrastructure.</span>
+            <span class="desc">Open the <a href="/portal/" class="accent-link">Awan Saya portal</a> to see all your hubs, machines, and active sessions in one place. Grant access to teammates without sharing credentials or exposing infrastructure.</span>
           </div>
         </li>
       </ol>
-      <p style="margin-top:24px;text-align:center;">
-        <a href="https://github.com/paulmooreparks/tela#readme" class="btn-secondary" style="font-size:0.9rem;">Read the full Getting Started guide &rarr;</a>
+      <p class="center-callout">
+        <a href="https://github.com/paulmooreparks/tela#readme" class="btn-secondary small-link-cta">Read the full Getting Started guide &rarr;</a>
       </p>
     </div>
   </div>
@@ -332,7 +154,7 @@ graph LR
   </div>
 
   <!-- Download (hidden until a GitHub Release exists) -->
-  <div class="download" id="download" style="display:none">
+  <div class="download hidden-download" id="download">
     <h2>Download Tela CLI</h2>
     <p class="download-sub">Connect to machines through your hub. Single binary, no installer.</p>
     <p class="release-banner" id="release-banner"></p>
@@ -359,7 +181,7 @@ graph LR
       </a>
     </div>
 
-    <h2 style="margin-top:48px;">Download Telad Agent</h2>
+    <h2 class="section-gap-top">Download Telad Agent</h2>
     <p class="download-sub">Install on each machine you want to access. Registers with your hub and advertises services.</p>
     <div class="download-grid">
       <a class="dl-card" href="#" data-asset="telad-windows-amd64.exe">
@@ -384,7 +206,7 @@ graph LR
       </a>
     </div>
 
-    <h2 style="margin-top:48px;">Download Telahubd Hub Server</h2>
+    <h2 class="section-gap-top">Download Telahubd Hub Server</h2>
     <p class="download-sub">Run your own hub. Single binary relay + console server.</p>
     <div class="download-grid">
       <a class="dl-card" href="#" data-asset="telahubd-windows-amd64.exe">
@@ -423,13 +245,8 @@ graph LR
     }
 
     function setPortalLinks(url, label) {
-      var nav = document.getElementById('portal-nav-link');
       var cta = document.getElementById('portal-cta-link');
       var hero = document.getElementById('hero-portal-link');
-      if (nav) {
-        nav.href = url;
-        nav.textContent = label;
-      }
       if (cta) {
         cta.href = url;
         cta.textContent = label;
@@ -457,7 +274,7 @@ graph LR
       if (userAvatar) {
         userAvatar.textContent = displayName(user).charAt(0).toUpperCase();
       }
-      setPortalLinks(REAL_PORTAL_URL, 'Open Portal');
+      setPortalLinks(REAL_PORTAL_URL, 'Portal');
       var cta = document.getElementById('portal-cta-link');
       if (cta && user) {
         cta.title = 'Signed in as ' + displayName(user);
@@ -531,7 +348,10 @@ graph LR
         if (!anyLinked) return; // no matching assets — keep section hidden
 
         // Show the download section
-        document.getElementById('download').style.display = '';
+        var downloadSection = document.getElementById('download');
+        if (downloadSection) {
+          downloadSection.classList.remove('hidden-download');
+        }
 
         // Show version banner
         var banner = document.getElementById('release-banner');
@@ -565,10 +385,9 @@ graph LR
   })();
   </script>
 
-  <footer>
+  <footer class="footer-links">
     <p>Awan Saya &middot; Powered by <a href="https://github.com/paulmooreparks/tela">Tela</a></p>
-    <p style="margin-top:4px;"><a href="https://github.com/paulmooreparks/awansaya">GitHub</a></p>
+    <p><a href="https://github.com/paulmooreparks/awansaya">GitHub</a></p>
   </footer>
-
 </body>
 </html>

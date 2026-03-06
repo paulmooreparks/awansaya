@@ -1,0 +1,198 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  color: #222;
+  line-height: 1.6;
+}
+
+a {
+  color: #0f5cc0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
+}
+
+a:hover {
+  color: #0b4692;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.topnav {
+  background: #1a1a2e;
+  color: #fff;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.topnav .logo {
+  font-weight: 700;
+  font-size: 1.1rem;
+  letter-spacing: 0.5px;
+  text-decoration: none;
+  color: #fff;
+}
+
+.topnav .logo em {
+  color: #5ee89e;
+  font-style: normal;
+}
+
+.topnav .spacer {
+  flex: 1;
+}
+
+.topnav nav {
+  display: flex;
+  gap: 16px;
+  font-size: 0.9rem;
+}
+
+.topnav nav a {
+  color: #ccc;
+  padding: 4px 0;
+}
+
+.topnav nav a:hover,
+.topnav nav a.active {
+  color: #fff;
+  text-decoration-color: #5ee89e;
+  text-decoration-thickness: 2px;
+}
+
+.topnav .signin-link {
+  color: #ddd;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 4px 0;
+  margin-right: 8px;
+}
+
+.topnav .signin-link:hover {
+  color: #fff;
+  text-decoration-color: #5ee89e;
+  text-decoration-thickness: 2px;
+}
+
+.topnav .cta-nav {
+  color: #5ee89e;
+  padding: 6px 0;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.topnav .cta-nav:hover {
+  color: #7bf0b1;
+}
+
+.topnav .user-area {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.85rem;
+  color: #aaa;
+}
+
+.topnav .user-area .avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #5ee89e;
+  color: #1a1a2e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.topnav .user-area button {
+  background: transparent;
+  color: #ddd;
+  border: 1px solid #445;
+  border-radius: 4px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.topnav .user-area button:hover {
+  color: #fff;
+  border-color: #5ee89e;
+}
+
+.topnav .user-area a {
+  color: #ddd;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 4px 0;
+}
+
+.topnav .user-area a:hover {
+  color: #fff;
+  text-decoration-color: #5ee89e;
+  text-decoration-thickness: 2px;
+}
+
+.password-field {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+}
+
+.password-field input {
+  flex: 1;
+  min-width: 0;
+  padding-right: 76px;
+}
+
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  border: 1px solid #ccd2da;
+  background: #fff;
+  color: #334155;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.password-toggle:hover {
+  background: #f6f8fa;
+}
+
+.password-toggle:focus-visible {
+  outline: 2px solid #5ee89e;
+  outline-offset: 1px;
+}
+
+footer {
+  margin-top: 40px;
+  color: #999;
+  font-size: 0.85rem;
+  text-align: center;
+  padding: 0 20px 24px;
+}
+
+footer a {
+  color: #666;
+}
+
+footer a:hover {
+  text-decoration: underline;
+}
+
+.footer-links p + p {
+  margin-top: 4px;
+}

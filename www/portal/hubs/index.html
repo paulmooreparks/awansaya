@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hub Management — Awan Saya</title>
+  <link rel="stylesheet" href="/assets/styles/common.css">
+  <link rel="stylesheet" href="/assets/styles/portal.css">
+</head>
+<body>
+  <div class="topnav">
+    <a href="/" class="logo"><em>Awan</em>Saya</a>
+    <nav>
+      <a href="/portal/">Dashboard</a>
+      <a href="/portal/#operations">Hubs &amp; Machines</a>
+      <a href="/portal/#access">Access Overview</a>
+      <a href="/portal/hubs/" class="active">Manage Hubs</a>
+      <a href="/portal/access/">Manage Access</a>
+    </nav>
+    <div class="user-area">
+      <span id="user-name">Guest</span>
+      <div class="avatar" id="user-avatar">G</div>
+      <a id="signin-link" href="/sign-in/?next=%2Fportal%2Fhubs%2F">Sign In</a>
+      <button id="logout-btn" class="hidden" type="button">Sign out</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="page-head">
+      <div class="page-head-copy">
+        <h1>Hub Management</h1>
+        <p class="page-desc">Register Tela hubs, review fleet status, and manage hub lifecycle actions in one place.</p>
+      </div>
+      <div class="page-actions">
+        <a class="page-link-chip" href="/portal/">&larr; Back to dashboard</a>
+      </div>
+    </div>
+
+    <div class="card" id="hub-management">
+      <div class="card-head">
+        <div class="card-head-copy">
+          <h2>&#x1F6E0;&#xFE0F; Hub Management</h2>
+          <p class="section-note">Register Tela hubs, remove old entries, and maintain the portal hub registry.</p>
+        </div>
+      </div>
+
+      <div class="access-summary-grid">
+        <div class="access-summary-card">
+          <div class="label">Hubs (Online)</div>
+          <div class="value" id="stat-hubs">- <span class="online-count">(-)</span></div>
+          <div class="meta">Registered hubs currently visible to this admin.</div>
+        </div>
+        <div class="access-summary-card">
+          <div class="label">Machines (Online)</div>
+          <div class="value" id="stat-machines">- <span class="online-count">(-)</span></div>
+          <div class="meta">Machines discovered across all registered hubs.</div>
+        </div>
+        <div class="access-summary-card">
+          <div class="label">Services (Active)</div>
+          <div class="value" id="stat-services">- <span class="online-count">(-)</span></div>
+          <div class="meta">Advertised services with active sessions shown in parentheses.</div>
+        </div>
+      </div>
+
+      <div class="section-stack">
+        <div class="subcard">
+          <h3>Registered Hubs</h3>
+          <p class="subcard-intro">Add and remove hub registrations here while still seeing enough status to confirm what you are changing.</p>
+          <div class="table-wrap" id="hubs-content"><p class="no-data">Loading...</p></div>
+          <form class="add-hub-form" id="add-hub-form">
+            <input name="name" placeholder="Hub name" required>
+            <input name="url" placeholder="https://hub-address.example.com" required>
+            <input name="viewerToken" placeholder="Viewer token (optional)">
+            <button type="submit">+ Add Hub</button>
+          </form>
+          <div class="status-msg" id="hub-manage-msg"></div>
+        </div>
+      </div>
+      <p class="last-updated" id="last-updated"></p>
+    </div>
+  </div>
+
+  <footer>
+    <a href="/">Awan Saya</a> &middot; Powered by <a href="https://github.com/paulmooreparks/tela">Tela</a>
+    &middot; <a href="https://github.com/paulmooreparks/awansaya">GitHub</a>
+  </footer>
+
+  <script>
+    var HUBS = [];
+    var AUTH_STATE = {
+      authEnabled: false,
+      authenticated: false,
+      canManageHubs: false,
+      user: null
+    };
+
+    function fetchHubList() {
+      return fetch('/api/hubs')
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          HUBS = (data && Array.isArray(data.hubs)) ? data.hubs : [];
+          return HUBS;
+        })
+        .catch(function () {
+          return HUBS;
+        });
+    }
+
+    function fetchAuthMode() {
+      return fetch('/api/auth-mode')
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          AUTH_STATE.authEnabled = !!(data && data.authEnabled);
+          AUTH_STATE.authenticated = !!(data && data.authenticated);
+          AUTH_STATE.canManageHubs = !!(data && data.canManageHubs);
+          AUTH_STATE.user = data && data.user ? data.user : null;
+        })
+        .catch(function () {
+          AUTH_STATE.authEnabled = false;
+          AUTH_STATE.authenticated = false;
+          AUTH_STATE.canManageHubs = false;
+          AUTH_STATE.user = null;
+        });
+    }
+
+    function escHtml(s) {
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function updateUserChrome() {
+      var nameEl = document.getElementById('user-name');
+      var avatarEl = document.getElementById('user-avatar');
+      var logoutBtn = document.getElementById('logout-btn');
+      var signinLink = document.getElementById('signin-link');
+      if (AUTH_STATE.user) {
+        var name = AUTH_STATE.user.displayName || AUTH_STATE.user.email;
+        nameEl.textContent = name;
+        avatarEl.textContent = String(name).charAt(0).toUpperCase();
+        logoutBtn.classList.remove('hidden');
+        signinLink.classList.add('hidden');
+      } else {
+        nameEl.textContent = AUTH_STATE.authEnabled ? 'Signed out' : 'Guest';
+        avatarEl.textContent = AUTH_STATE.authEnabled ? '?' : 'G';
+        logoutBtn.classList.add('hidden');
+        signinLink.classList.remove('hidden');
+      }
+    }
+
+    function setStatusMessage(id, text, isError) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = text || '';
+      el.style.color = isError ? '#c0392b' : '#666';
+    }
+
+    function handleLogout() {
+      fetch('/api/logout', { method: 'POST' })
+        .then(function () {
+          window.location.href = '/';
+        });
+    }
+
+    function fetchAllHubs() {
+      return Promise.all(HUBS.map(function (hub) {
+        var statusP = fetch('/api/hub-status/' + encodeURIComponent(hub.name))
+          .then(function (r) { return r.json(); })
+          .catch(function () { return { machines: [] }; });
+        return Promise.all([statusP]).then(function (results) {
+          var data = results[0];
+          var hubName = (data && data.hubName) ? data.hubName : hub.name;
+          return {
+            hub: hub,
+            hubName: hubName,
+            status: (data && data.machines) ? 'online' : 'offline',
+            data: data
+          };
+        });
+      }));
+    }
+
+    function render(results) {
+      var totalMachines = 0, totalOnline = 0, totalServices = 0, totalSessions = 0;
+
+      if (results.length === 0) {
+        document.getElementById('hubs-content').innerHTML =
+          '<div class="empty-state"><div class="icon">&#x1F5A7;</div>'
+          + '<p><strong>No hubs configured</strong></p>'
+          + '<p>Add a Tela hub below to get started.</p></div>';
+        document.getElementById('stat-hubs').innerHTML = '0 <span class="online-count">(0)</span>';
+        document.getElementById('stat-machines').innerHTML = '0 <span class="online-count">(0)</span>';
+        document.getElementById('stat-services').innerHTML = '0 <span class="online-count">(0)</span>';
+        document.getElementById('last-updated').textContent = 'Last updated: ' + new Date().toLocaleTimeString();
+        return;
+      }
+
+      var hubsHtml = '<table class="hub-table"><thead><tr>'
+        + '<th>Hub</th><th>Status</th><th>Machines</th><th>Online</th><th>Sessions</th><th></th>'
+        + '</tr></thead><tbody>';
+
+      results.forEach(function (r, idx) {
+        var machines = r.data.machines || [];
+        var online = machines.filter(function (m) { return m.agentConnected; }).length;
+        var sessions = machines.reduce(function (sum, m) { return sum + (m.sessionCount || 0); }, 0);
+        var svcs = machines.reduce(function (sum, m) { return sum + (m.services || []).length; }, 0);
+
+        totalMachines += machines.length;
+        totalOnline += online;
+        totalServices += svcs;
+        totalSessions += sessions;
+
+        var dot = r.status === 'online'
+          ? '<span class="dot green"></span> Online'
+          : '<span class="dot red"></span> Unreachable';
+
+        var consoleLink = '<a class="btn-console" href="' + escHtml(r.hub.url) + '/" target="_blank">\u2197 Console</a>';
+        var removeBtn = '<button class="btn-remove" type="button" onclick="removeHub(' + idx + ')" title="Remove hub">\u2716</button>';
+        var actionCell = '<span class="hub-actions">' + consoleLink + removeBtn + '</span>';
+
+        var hubMeta = [];
+        var hi = r.data.hub || {};
+        if (hi.os) hubMeta.push('<span>' + escHtml(hi.os) + '/' + escHtml(hi.arch || '') + '</span>');
+        if (hi.hostname) hubMeta.push('<span>\uD83D\uDCBB ' + escHtml(hi.hostname) + '</span>');
+        if (hi.nodeVersion) hubMeta.push('<span>node ' + escHtml(hi.nodeVersion) + '</span>');
+
+        var hubCell = '<span class="hub-name">' + escHtml(r.hubName) + '</span><br><span class="hub-url">' + escHtml(r.hub.url) + '</span>';
+        if (hubMeta.length > 0) hubCell += '<div class="machine-meta">' + hubMeta.join('') + '</div>';
+
+        hubsHtml += '<tr>'
+          + '<td>' + hubCell + '</td>'
+          + '<td>' + dot + '</td>'
+          + '<td>' + machines.length + '</td>'
+          + '<td>' + online + '</td>'
+          + '<td>' + sessions + '</td>'
+          + '<td>' + actionCell + '</td>'
+          + '</tr>';
+      });
+
+      hubsHtml += '</tbody></table>';
+      document.getElementById('hubs-content').innerHTML = hubsHtml;
+
+      var hubsOnline = results.filter(function (r) { return r.status === 'online'; }).length;
+      document.getElementById('stat-hubs').innerHTML = results.length + ' <span class="online-count">(' + hubsOnline + ')</span>';
+      document.getElementById('stat-machines').innerHTML = totalMachines + ' <span class="online-count">(' + totalOnline + ')</span>';
+      document.getElementById('stat-services').innerHTML = totalServices + ' <span class="online-count">(' + totalSessions + ')</span>';
+
+      document.getElementById('last-updated').textContent = 'Last updated: ' + new Date().toLocaleTimeString();
+    }
+
+    function poll() {
+      fetchHubList().then(function () {
+        return fetchAllHubs();
+      }).then(render)
+        .catch(function () {
+          setStatusMessage('hub-manage-msg', 'Failed to load hub management.', true);
+        });
+    }
+
+    function removeHub(index) {
+      if (!HUBS[index]) return;
+      if (!confirm('Remove hub "' + HUBS[index].name + '"?')) return;
+      var name = HUBS[index].name;
+      fetch('/api/hubs?name=' + encodeURIComponent(name), { method: 'DELETE' })
+        .then(function (r) {
+          return r.json().then(function (data) {
+            return { ok: r.ok, data: data };
+          });
+        })
+        .then(function (result) {
+          if (!result.ok) throw new Error(result.data.error || 'Failed to remove hub');
+          HUBS = result.data.hubs || HUBS;
+          setStatusMessage('hub-manage-msg', 'Hub removed.');
+          poll();
+        })
+        .catch(function (err) {
+          setStatusMessage('hub-manage-msg', err.message, true);
+        });
+    }
+
+    window.removeHub = removeHub;
+
+    document.getElementById('add-hub-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var name = this.elements.name.value.trim();
+      var url = this.elements.url.value.trim().replace(/\/+$/, '');
+      var viewerToken = this.elements.viewerToken.value.trim();
+      if (!name || !url) return;
+
+      var payload = { name: name, url: url };
+      if (viewerToken) payload.viewerToken = viewerToken;
+
+      var form = this;
+      fetch('/api/hubs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+        .then(function (r) {
+          return r.json().then(function (data) {
+            return { ok: r.ok, data: data, status: r.status };
+          });
+        })
+        .then(function (result) {
+          if (!result.ok) {
+            if (result.status === 409) throw new Error(result.data.error || 'A hub with that name or URL already exists.');
+            throw new Error(result.data.error || 'Failed to add hub');
+          }
+          HUBS = result.data.hubs || HUBS;
+          form.reset();
+          setStatusMessage('hub-manage-msg', 'Hub added.');
+          poll();
+        })
+        .catch(function (err) {
+          setStatusMessage('hub-manage-msg', err.message, true);
+        });
+    });
+
+    document.getElementById('logout-btn').addEventListener('click', handleLogout);
+
+    function boot() {
+      fetchAuthMode()
+        .then(function () {
+          updateUserChrome();
+          if (!AUTH_STATE.authenticated) {
+            window.location.href = '/sign-in/?next=%2Fportal%2Fhubs%2F';
+            return Promise.reject(new Error('signin'));
+          }
+          if (!AUTH_STATE.canManageHubs) {
+            window.location.href = '/portal/';
+            return Promise.reject(new Error('dashboard'));
+          }
+          return poll();
+        })
+        .then(function () {
+          setInterval(poll, 5000);
+        })
+        .catch(function (err) {
+          if (err && (err.message === 'signin' || err.message === 'dashboard')) return;
+          setStatusMessage('hub-manage-msg', 'Failed to load hub management.', true);
+        });
+    }
+
+    boot();
+  </script>
+</body>
+</html>

@@ -4,200 +4,20 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Awan Saya Portal</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: system-ui, -apple-system, sans-serif;
-      color: #222;
-      line-height: 1.6;
-      background: #f4f5f7;
-    }
-
-    /* Top nav */
-    .topnav {
-      background: #1a1a2e;
-      color: #fff;
-      padding: 0 24px;
-      display: flex;
-      align-items: center;
-      height: 52px;
-      gap: 24px;
-    }
-    .topnav .logo { font-weight: 700; font-size: 1.1rem; letter-spacing: 0.5px; text-decoration: none; color: #fff; }
-    .topnav .logo em { color: #5ee89e; font-style: normal; }
-    .topnav nav { display: flex; gap: 16px; font-size: 0.9rem; }
-    .topnav nav a { color: #ccc; text-decoration: none; padding: 4px 0; }
-    .topnav nav a:hover, .topnav nav a.active { color: #fff; border-bottom: 2px solid #5ee89e; }
-    .topnav .user-area { margin-left: auto; display: flex; align-items: center; gap: 12px; font-size: 0.85rem; color: #aaa; }
-    .topnav .user-area .avatar {
-      width: 30px; height: 30px; border-radius: 50%; background: #5ee89e; color: #1a1a2e;
-      display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem;
-    }
-    .topnav .user-area button {
-      background: transparent; color: #ddd; border: 1px solid #445; border-radius: 4px;
-      padding: 4px 10px; cursor: pointer; font-size: 0.8rem;
-    }
-    .topnav .user-area button:hover { color: #fff; border-color: #5ee89e; }
-    .topnav .user-area a {
-      color: #ddd; text-decoration: none; font-size: 0.85rem; font-weight: 600;
-      padding: 4px 0;
-    }
-    .topnav .user-area a:hover { color: #fff; border-bottom: 2px solid #5ee89e; }
-    .hidden { display: none !important; }
-
-    /* Layout */
-    .container { max-width: 1100px; margin: 0 auto; padding: 24px 20px; }
-    h1 { font-size: 1.4rem; margin-bottom: 4px; }
-    .page-desc { color: #666; font-size: 0.9rem; margin-bottom: 24px; }
-
-    /* Summary stats */
-    .stats { display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
-    .stat-card {
-      background: #fff;
-      border: 1px solid #e0e0e0;
-      border-radius: 8px;
-      padding: 16px 24px;
-      min-width: 160px;
-      flex: 1;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-    }
-    .stat-card .label { font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
-    .stat-card .value { font-size: 1.6rem; font-weight: 700; color: #222; margin-top: 4px; }
-    .stat-card .value.green { color: #2d7d46; }
-    .stat-card .value .online-count { color: #2d7d46; font-size: 1.1rem; font-weight: 600; }
-
-    /* Cards */
-    .card {
-      background: #fff;
-      border: 1px solid #e0e0e0;
-      border-radius: 8px;
-      padding: 20px;
-      margin: 16px 0;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-    }
-    .card h2 { font-size: 1.05rem; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
-
-    /* Hub table */
-    .hub-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-    .hub-table th { text-align: left; padding: 8px 12px; border-bottom: 2px solid #e0e0e0; color: #555; font-weight: 600; }
-    .hub-table td { padding: 8px 12px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
-    .hub-table tr:last-child td { border-bottom: none; }
-
-    .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; }
-    .dot.green { background: #2d7d46; }
-    .dot.red { background: #c0392b; }
-    .dot.yellow { background: #e6a817; }
-    .dot.gray { background: #aaa; }
-
-    .hub-name { font-weight: 600; }
-    .hub-url { color: #888; font-size: 0.8rem; }
-
-    /* Machine list (aggregated) */
-    .machine-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-    .machine-table th { text-align: left; padding: 8px 12px; border-bottom: 2px solid #e0e0e0; color: #555; font-weight: 600; }
-    .machine-table td { padding: 8px 12px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
-    .machine-table tr:last-child td { border-bottom: none; }
-    .machine-name { font-weight: 600; }
-    .machine-meta { font-size: 0.78rem; color: #888; margin-top: 2px; }
-    .machine-meta span { margin-right: 10px; }
-    .service-tag {
-      display: inline-block; background: #e8f5e9; color: #2d7d46;
-      padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;
-      margin: 1px 4px 1px 0; font-weight: 500;
-    }
-    .tag { display: inline-block; background: #f0f0f0; color: #555; padding: 1px 6px; border-radius: 3px; font-size: 0.75rem; margin: 1px 2px; }
-
-    .btn-console {
-      display: inline-block; background: #1a1a2e; color: #fff; border: none;
-      padding: 3px 10px; border-radius: 4px; font-size: 0.78rem;
-      cursor: pointer; text-decoration: none; transition: background 0.15s;
-    }
-    .btn-console:hover { background: #333; }
-
-    /* Add hub form */
-    .add-hub-form {
-      display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap;
-    }
-    .add-hub-form input {
-      padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px;
-      font-size: 0.85rem; font-family: inherit;
-    }
-    .add-hub-form input[name="name"] { width: 140px; }
-    .add-hub-form input[name="url"] { width: 260px; }
-    .add-hub-form input[name="viewerToken"] { width: 260px; }
-    .add-hub-form button {
-      background: #5ee89e; color: #1a1a2e; border: none; padding: 6px 16px;
-      border-radius: 4px; font-weight: 600; font-size: 0.85rem; cursor: pointer;
-    }
-    .add-hub-form button:hover { background: #4dd889; }
-    .btn-remove {
-      background: none; border: none; color: #c0392b; cursor: pointer;
-      font-size: 0.8rem; padding: 2px 6px;
-    }
-    .btn-remove:hover { text-decoration: underline; }
-
-    .section-note { color: #666; font-size: 0.9rem; margin-bottom: 14px; }
-    .stack { display: grid; gap: 18px; }
-    .subcard {
-      border: 1px solid #edf0f3;
-      border-radius: 8px;
-      padding: 16px;
-      background: #fafbfc;
-    }
-    .subcard h3 { font-size: 0.98rem; margin-bottom: 10px; }
-    .admin-form {
-      display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
-    }
-    .admin-form input, .admin-form select {
-      padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px;
-      font-size: 0.85rem; font-family: inherit; min-width: 150px;
-    }
-    .admin-form label { font-size: 0.85rem; color: #555; display: flex; align-items: center; gap: 6px; }
-    .admin-form button {
-      background: #1a1a2e; color: #fff; border: none; padding: 6px 14px;
-      border-radius: 4px; font-weight: 600; font-size: 0.85rem; cursor: pointer;
-    }
-    .admin-form button:hover { background: #333; }
-    .admin-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-    .admin-table th { text-align: left; padding: 8px 12px; border-bottom: 2px solid #e0e0e0; color: #555; font-weight: 600; }
-    .admin-table td { padding: 8px 12px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
-    .pill {
-      display: inline-block; margin: 2px 6px 2px 0; padding: 2px 8px;
-      border-radius: 999px; font-size: 0.78rem; font-weight: 600;
-      background: #eef2ff; color: #334155;
-    }
-    .pill.admin { background: #e8f5e9; color: #245533; }
-    .pill.owner { background: #fff4d6; color: #8a5b00; }
-    .status-msg { margin-top: 10px; font-size: 0.85rem; color: #666; }
-
-    /* History */
-    .history-list { list-style: none; padding: 0; font-size: 0.85rem; max-height: 280px; overflow-y: auto; }
-    .history-list li { padding: 4px 0; border-bottom: 1px solid #f0f0f0; display: flex; gap: 12px; }
-    .history-list li:last-child { border-bottom: none; }
-    .history-time { color: #aaa; min-width: 80px; }
-    .history-hub { color: #555; min-width: 80px; font-size: 0.8rem; }
-    .history-machine { font-weight: 600; color: #2d7d46; min-width: 80px; }
-    .history-event { color: #555; }
-    .history-detail { color: #888; }
-
-    .no-data { color: #999; font-style: italic; padding: 12px 0; }
-    .last-updated { color: #aaa; font-size: 0.8rem; margin-top: 8px; }
-    .empty-state { text-align: center; padding: 40px 16px; color: #888; }
-    .empty-state .icon { font-size: 2.5rem; margin-bottom: 12px; }
-
-    footer { margin-top: 40px; color: #999; font-size: 0.85rem; text-align: center; padding-bottom: 24px; }
-    footer a { color: #666; text-decoration: none; }
-    footer a:hover { text-decoration: underline; }
-  </style>
+  <link rel="stylesheet" href="/assets/styles/common.css">
+  <link rel="stylesheet" href="/assets/styles/portal.css">
+  <script src="/assets/scripts/password-toggle.js" defer></script>
 </head>
 <body>
   <div class="topnav">
     <a href="/" class="logo"><em>Awan</em>Saya</a>
     <nav>
       <a href="/portal/" class="active">Dashboard</a>
-      <a href="/portal/#hubs">Hubs</a>
-      <a href="/portal/#access">Access</a>
-      <a href="/portal/#machines">Machines</a>
+      <a href="/portal/#operations">Hubs &amp; Machines</a>
+      <a id="access-nav-link" href="/portal/#access" class="hidden">Access</a>
+      <a href="/portal/#activity">Activity</a>
+      <a id="hub-manage-nav-link" href="/portal/hubs/" class="hidden">Manage Hubs</a>
+      <a id="manage-nav-link" href="/portal/access/" class="hidden">Manage Access</a>
     </nav>
     <div class="user-area">
       <span id="user-name">Guest</span>
@@ -208,93 +28,100 @@
   </div>
 
   <div class="container">
-    <h1>Dashboard</h1>
-    <p class="page-desc">Multi-hub management for Tela connectivity fabric</p>
-
-    <!-- Summary stats -->
-    <div class="stats">
-      <div class="stat-card">
-        <div class="label">Hubs (Online)</div>
-        <div class="value" id="stat-hubs">- <span class="online-count">(-)</span></div>
-      </div>
-      <div class="stat-card">
-        <div class="label">Machines (Online)</div>
-        <div class="value" id="stat-machines">- <span class="online-count">(-)</span></div>
-      </div>
-      <div class="stat-card">
-        <div class="label">Services (Active)</div>
-        <div class="value" id="stat-services">- <span class="online-count">(-)</span></div>
+    <div class="page-head">
+      <div class="page-head-copy">
+        <h1>Dashboard</h1>
+        <p class="page-desc">Multi-hub management for Tela connectivity fabric</p>
       </div>
     </div>
 
-    <!-- Hubs -->
-    <div class="card" id="hubs">
-      <h2>&#x1F5A7; Hubs</h2>
-      <div id="hubs-content">
-        <p class="no-data">Loading...</p>
-      </div>
-      <form class="add-hub-form" id="add-hub-form">
-        <input name="name" placeholder="Hub name" required>
-        <input name="url" placeholder="https://hub-address.example.com" required>
-        <input name="viewerToken" placeholder="Viewer token (optional)">
-        <button type="submit">+ Add Hub</button>
-      </form>
-    </div>
-
-    <div class="card hidden" id="access">
-      <h2>&#x1F512; Access</h2>
-      <p class="section-note">Create users and grant portal access to specific Tela hubs.</p>
-      <div class="stack">
-        <div class="subcard">
-          <h3>Create User</h3>
-          <form class="admin-form" id="create-user-form">
-            <input name="displayName" placeholder="Display name" required>
-            <input name="email" type="email" placeholder="user@example.com" required>
-            <input name="password" type="password" placeholder="Temporary password" required>
-            <label><input name="isAdmin" type="checkbox"> Portal admin</label>
-            <button type="submit">Create User</button>
-          </form>
-          <div class="status-msg" id="create-user-msg"></div>
+    <div class="card" id="operations">
+      <div class="card-head">
+        <div class="card-head-copy">
+          <h2><span class="info-heading">&#x1F5A7; Hubs and Machines <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About Hubs and Machines">?</button><span class="info-tip-popup" role="tooltip">At-a-glance operational totals across the Tela hubs and machines visible to you.</span></span></span></h2>
         </div>
-
-        <div class="subcard">
-          <h3>Grant Hub Access</h3>
-          <form class="admin-form" id="grant-access-form">
-            <select name="userId" required></select>
-            <select name="hubName" required></select>
-            <select name="role" required>
-              <option value="viewer">Viewer</option>
-              <option value="admin">Admin</option>
-            </select>
-            <button type="submit">Grant Access</button>
-          </form>
-          <div class="status-msg" id="grant-access-msg"></div>
-        </div>
-
-        <div class="subcard">
-          <h3>Users</h3>
-          <div id="users-content"><p class="no-data">Loading...</p></div>
-        </div>
-
-        <div class="subcard">
-          <h3>Hub Memberships</h3>
-          <div id="memberships-content"><p class="no-data">Loading...</p></div>
+        <div class="card-actions">
+          <a class="page-link-chip hidden" id="dashboard-hubs-manage-link" href="/portal/hubs/">Manage Hubs</a>
         </div>
       </div>
-    </div>
+      <div class="access-summary-grid">
+        <div class="access-summary-card">
+          <div class="label">Hubs (Online)</div>
+          <div class="value" id="stat-hubs">- <span class="online-count">(-)</span></div>
+          <div class="meta">Registered Tela hubs currently visible in this portal.</div>
+        </div>
+        <div class="access-summary-card">
+          <div class="label">Machines (Online)</div>
+          <div class="value" id="stat-machines">- <span class="online-count">(-)</span></div>
+          <div class="meta">Machines discovered across the visible hub fleet.</div>
+        </div>
+        <div class="access-summary-card">
+          <div class="label">Services (Active)</div>
+          <div class="value" id="stat-services">- <span class="online-count">(-)</span></div>
+          <div class="meta">Advertised services with active sessions shown in parentheses.</div>
+        </div>
+      </div>
+      <div class="section-stack">
+        <div class="subcard">
+          <h3><span class="info-heading">Visible Hubs <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About Visible Hubs">?</button><span class="info-tip-popup" role="tooltip">Review hub reachability, fleet size, and jump into a hub console when you need deeper infrastructure detail.</span></span></span></h3>
+          <div class="table-wrap" id="hubs-content"><p class="no-data">Loading...</p></div>
+        </div>
 
-    <!-- All machines (aggregated across hubs) -->
-    <div class="card" id="machines">
-      <h2>&#x1F4BB; All Machines</h2>
-      <div id="machines-content">
-        <p class="no-data">Loading...</p>
+        <div class="subcard">
+          <h3><span class="info-heading">All Machines <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About All Machines">?</button><span class="info-tip-popup" role="tooltip">Fleet-wide machine view across every visible hub, including status, services, and last-seen details.</span></span></span></h3>
+          <div class="table-wrap" id="machines-content"><p class="no-data">Loading...</p></div>
+        </div>
       </div>
       <p class="last-updated" id="last-updated"></p>
     </div>
 
+    <div class="card hidden" id="access">
+      <div class="card-head">
+        <div class="card-head-copy">
+          <h2><span class="info-heading">&#x1F512; Access Overview <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About Access Overview">?</button><span class="info-tip-popup" role="tooltip">Who can use the portal, what role they hold, and which Tela hubs they can reach.</span></span></span></h2>
+        </div>
+        <div class="card-actions">
+          <a class="page-link-chip hidden" id="dashboard-access-manage-link" href="/portal/access/">Manage Access</a>
+        </div>
+      </div>
+      <div class="access-summary-grid">
+        <div class="access-summary-card">
+          <div class="label">Users</div>
+          <div class="value" id="access-stat-users">-</div>
+          <div class="meta" id="access-stat-users-meta">Loading...</div>
+        </div>
+        <div class="access-summary-card">
+          <div class="label">Portal admins</div>
+          <div class="value" id="access-stat-admins">-</div>
+          <div class="meta">Full visibility across all hubs</div>
+        </div>
+        <div class="access-summary-card">
+          <div class="label">Explicit memberships</div>
+          <div class="value" id="access-stat-memberships">-</div>
+          <div class="meta">Per-hub access grants and ownership</div>
+        </div>
+        <div class="access-summary-card">
+          <div class="label">Registered hubs</div>
+          <div class="value" id="access-stat-registered-hubs">-</div>
+          <div class="meta">Hubs available for assignment</div>
+        </div>
+      </div>
+      <div class="section-stack">
+        <div class="subcard">
+          <h3><span class="info-heading">User Directory <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About User Directory">?</button><span class="info-tip-popup" role="tooltip">Review portal users and their effective hub visibility at a glance.</span></span></span></h3>
+          <div class="table-wrap" id="users-content"><p class="no-data">Loading...</p></div>
+        </div>
+
+        <div class="subcard">
+          <h3><span class="info-heading">Hub Memberships <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About Hub Memberships">?</button><span class="info-tip-popup" role="tooltip">See the explicit per-hub grants and ownership assignments that shape visibility.</span></span></span></h3>
+          <div class="table-wrap" id="memberships-content"><p class="no-data">Loading...</p></div>
+        </div>
+      </div>
+    </div>
+
     <!-- Recent Activity (aggregated) -->
-    <div class="card">
-      <h2>&#x1F4C8; Recent Activity</h2>
+    <div class="card" id="activity">
+      <h2><span class="info-heading">&#x1F4C8; Recent Activity <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About Recent Activity">?</button><span class="info-tip-popup" role="tooltip">Recent machine and session events across the visible hubs, ordered from newest to oldest.</span></span></span></h2>
       <div id="history-content">
         <p class="no-data">Loading...</p>
       </div>
@@ -402,6 +229,17 @@
 
     function refreshAuthUI() {
       updateUserChrome();
+      var accessNavLink = document.getElementById('access-nav-link');
+      var manageNavLink = document.getElementById('manage-nav-link');
+      var hubManageNavLink = document.getElementById('hub-manage-nav-link');
+      var accessManageLink = document.getElementById('dashboard-access-manage-link');
+      var hubsManageLink = document.getElementById('dashboard-hubs-manage-link');
+      var method = AUTH_STATE.canManageHubs ? 'remove' : 'add';
+      if (accessNavLink) accessNavLink.classList[method]('hidden');
+      if (manageNavLink) manageNavLink.classList[method]('hidden');
+      if (hubManageNavLink) hubManageNavLink.classList[method]('hidden');
+      if (accessManageLink) accessManageLink.classList[method]('hidden');
+      if (hubsManageLink) hubsManageLink.classList[method]('hidden');
     }
 
     function setStatusMessage(id, text, isError) {
@@ -425,32 +263,18 @@
       var hubs = overview.hubs || [];
       var memberships = overview.memberships || [];
       var membershipsByUser = {};
+      var adminCount = users.filter(function (u) { return !!u.isAdmin; }).length;
 
       memberships.forEach(function (m) {
         if (!membershipsByUser[m.userId]) membershipsByUser[m.userId] = [];
         membershipsByUser[m.userId].push(m);
       });
 
-      var userSelect = document.querySelector('#grant-access-form select[name="userId"]');
-      var hubSelect = document.querySelector('#grant-access-form select[name="hubName"]');
-      if (userSelect) {
-        var selectableUsers = users.filter(function (u) { return !u.isAdmin; });
-        userSelect.innerHTML = selectableUsers.length
-          ? selectableUsers.map(function (u) {
-              return '<option value="' + u.id + '">' + escHtml(u.displayName || u.email) + ' (' + escHtml(u.email) + ')</option>';
-            }).join('')
-          : '<option value="">No non-admin users</option>';
-        userSelect.disabled = selectableUsers.length === 0;
-      }
-
-      if (hubSelect) {
-        hubSelect.innerHTML = hubs.length
-          ? hubs.map(function (h) {
-              return '<option value="' + escHtml(h.name) + '">' + escHtml(h.name) + '</option>';
-            }).join('')
-          : '<option value="">No hubs available</option>';
-        hubSelect.disabled = hubs.length === 0;
-      }
+      document.getElementById('access-stat-users').textContent = String(users.length);
+      document.getElementById('access-stat-users-meta').textContent = users.length === 1 ? '1 portal account' : users.length + ' portal accounts';
+      document.getElementById('access-stat-admins').textContent = String(adminCount);
+      document.getElementById('access-stat-memberships').textContent = String(memberships.length);
+      document.getElementById('access-stat-registered-hubs').textContent = String(hubs.length);
 
       if (users.length === 0) {
         document.getElementById('users-content').innerHTML = '<p class="no-data">No users yet.</p>';
@@ -482,13 +306,12 @@
       if (memberships.length === 0) {
         document.getElementById('memberships-content').innerHTML = '<p class="no-data">No explicit hub memberships yet.</p>';
       } else {
-        var membershipsHtml = '<table class="admin-table"><thead><tr><th>User</th><th>Hub</th><th>Role</th><th></th></tr></thead><tbody>';
+        var membershipsHtml = '<table class="admin-table"><thead><tr><th>User</th><th>Hub</th><th>Role</th></tr></thead><tbody>';
         memberships.forEach(function (m) {
           membershipsHtml += '<tr>'
             + '<td><strong>' + escHtml(m.displayName || m.email) + '</strong><br><span class="hub-url">' + escHtml(m.email) + '</span></td>'
             + '<td>' + escHtml(m.hubName) + '</td>'
             + '<td><span class="pill ' + escHtml(m.role) + '">' + escHtml(m.role) + '</span></td>'
-            + '<td><button class="btn-remove" type="button" onclick="revokeMembership(' + Number(m.userId) + ', \'' + escHtml(m.hubName).replace(/'/g, '&#39;') + '\')">Remove</button></td>'
             + '</tr>';
         });
         membershipsHtml += '</tbody></table>';
@@ -502,11 +325,6 @@
       }).then(function () {
         refreshAuthUI();
         refreshAccessUI();
-        if (!AUTH_STATE.canManageHubs) {
-          document.getElementById('add-hub-form').style.display = 'none';
-        } else {
-          document.getElementById('add-hub-form').style.display = 'flex';
-        }
         initDashboard();
       });
     }
@@ -519,137 +337,6 @@
     }
 
     function initDashboard() {
-
-    // ── Add hub form ────────────────────────────────────────────────
-    document.getElementById('add-hub-form').addEventListener('submit', function (e) {
-      e.preventDefault();
-      var name = this.elements.name.value.trim();
-      var url = this.elements.url.value.trim().replace(/\/+$/, '');
-      var viewerToken = this.elements.viewerToken.value.trim();
-      if (!name || !url) return;
-
-      var payload = { name: name, url: url };
-      if (viewerToken) payload.viewerToken = viewerToken;
-
-      var form = this;
-      fetch('/api/hubs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      })
-        .then(function (r) {
-          if (r.status === 409) { alert('A hub with that name or URL already exists.'); throw new Error('dup'); }
-          if (!r.ok) throw new Error('HTTP ' + r.status);
-          return r.json();
-        })
-        .then(function (data) {
-          HUBS = data.hubs || HUBS;
-          form.reset();
-          fetchAccessOverview().then(refreshAccessUI);
-          poll();
-        })
-        .catch(function (err) {
-          if (err.message !== 'dup') alert('Failed to add hub: ' + err.message);
-        });
-    });
-
-    function removeHub(index) {
-      if (!confirm('Remove hub "' + HUBS[index].name + '"?')) return;
-      var name = HUBS[index].name;
-      fetch('/api/hubs?name=' + encodeURIComponent(name), { method: 'DELETE' })
-        .then(function (r) {
-          if (!r.ok) throw new Error('HTTP ' + r.status);
-          return r.json();
-        })
-        .then(function (data) {
-          HUBS = data.hubs || HUBS;
-          fetchAccessOverview().then(refreshAccessUI);
-          poll();
-        })
-        .catch(function (err) {
-          alert('Failed to remove hub: ' + err.message);
-        });
-    }
-
-    document.getElementById('create-user-form').addEventListener('submit', function (e) {
-      e.preventDefault();
-      var payload = {
-        displayName: this.elements.displayName.value.trim(),
-        email: this.elements.email.value.trim(),
-        password: this.elements.password.value,
-        isAdmin: !!this.elements.isAdmin.checked
-      };
-      fetch('/api/admin/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      })
-        .then(function (r) {
-          return r.json().then(function (data) {
-            return { ok: r.ok, data: data };
-          });
-        })
-        .then(function (result) {
-          if (!result.ok) throw new Error(result.data.error || 'Failed to create user');
-          AUTH_STATE.accessOverview = result.data;
-          refreshAccessUI();
-          document.getElementById('create-user-form').reset();
-          setStatusMessage('create-user-msg', 'User created.');
-        })
-        .catch(function (err) {
-          setStatusMessage('create-user-msg', err.message, true);
-        });
-    });
-
-    document.getElementById('grant-access-form').addEventListener('submit', function (e) {
-      e.preventDefault();
-      var payload = {
-        userId: Number(this.elements.userId.value),
-        hubName: this.elements.hubName.value,
-        role: this.elements.role.value
-      };
-      fetch('/api/admin/memberships', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      })
-        .then(function (r) {
-          return r.json().then(function (data) {
-            return { ok: r.ok, data: data };
-          });
-        })
-        .then(function (result) {
-          if (!result.ok) throw new Error(result.data.error || 'Failed to grant access');
-          AUTH_STATE.accessOverview = result.data;
-          refreshAccessUI();
-          setStatusMessage('grant-access-msg', 'Hub access updated.');
-        })
-        .catch(function (err) {
-          setStatusMessage('grant-access-msg', err.message, true);
-        });
-    });
-
-    window.revokeMembership = function (userId, hubName) {
-      if (!confirm('Remove access to ' + hubName + '?')) return;
-      fetch('/api/admin/memberships?userId=' + encodeURIComponent(userId) + '&hubName=' + encodeURIComponent(hubName), {
-        method: 'DELETE'
-      })
-        .then(function (r) {
-          return r.json().then(function (data) {
-            return { ok: r.ok, data: data };
-          });
-        })
-        .then(function (result) {
-          if (!result.ok) throw new Error(result.data.error || 'Failed to remove access');
-          AUTH_STATE.accessOverview = result.data;
-          refreshAccessUI();
-          setStatusMessage('grant-access-msg', 'Hub access removed.');
-        })
-        .catch(function (err) {
-          setStatusMessage('grant-access-msg', err.message, true);
-        });
-    };
-
     // ── Helpers ─────────────────────────────────────────────────────
     function timeAgo(isoStr) {
       if (!isoStr) return '\u2014';
@@ -705,22 +392,15 @@
       var totalMachines = 0, totalOnline = 0, totalServices = 0, totalSessions = 0;
 
       if (results.length === 0) {
-        document.getElementById('hubs-content').innerHTML =
-          '<div class="empty-state"><div class="icon">&#x1F5A7;</div>'
-          + '<p><strong>No hubs configured</strong></p>'
-          + '<p>Add a Tela hub below to get started.</p></div>';
-        document.getElementById('machines-content').innerHTML = '<p class="no-data">No hubs configured.</p>';
+        document.getElementById('hubs-content').innerHTML = '<p class="no-data">No hubs configured.</p>';
+        document.getElementById('machines-content').innerHTML = '<p class="no-data">No machines registered across any hub.</p>';
         document.getElementById('history-content').innerHTML = '<p class="no-data">No hubs configured.</p>';
         document.getElementById('stat-hubs').innerHTML = '0 <span class="online-count">(0)</span>';
         document.getElementById('stat-machines').innerHTML = '0 <span class="online-count">(0)</span>';
         document.getElementById('stat-services').innerHTML = '0 <span class="online-count">(0)</span>';
+        document.getElementById('last-updated').textContent = 'Last updated: ' + new Date().toLocaleTimeString();
         return;
       }
-
-      // Hubs table
-      var hubsHtml = '<table class="hub-table"><thead><tr>'
-        + '<th>Hub</th><th>Status</th><th>Machines</th><th>Online</th><th>Sessions</th><th></th>'
-        + '</tr></thead><tbody>';
 
       results.forEach(function (r, idx) {
         var machines = r.data.machines || [];
@@ -732,18 +412,33 @@
         totalOnline += online;
         totalServices += svcs;
         totalSessions += sessions;
+      });
+
+      // Stats
+      var hubsOnline = results.filter(function (r) { return r.status === 'online'; }).length;
+      document.getElementById('stat-hubs').innerHTML = results.length + ' <span class="online-count">(' + hubsOnline + ')</span>';
+      document.getElementById('stat-machines').innerHTML = totalMachines + ' <span class="online-count">(' + totalOnline + ')</span>';
+      document.getElementById('stat-services').innerHTML = totalServices + ' <span class="online-count">(' + totalSessions + ')</span>';
+
+      var hubsHtml = '<table class="hub-table"><thead><tr>'
+        + '<th>Hub</th><th>Status</th><th>Machines</th><th>Online</th><th>Sessions</th><th></th>'
+        + '</tr></thead><tbody>';
+
+      results.forEach(function (r) {
+        var machines = r.data.machines || [];
+        var online = machines.filter(function (m) { return m.agentConnected; }).length;
+        var sessions = machines.reduce(function (sum, m) { return sum + (m.sessionCount || 0); }, 0);
 
         var dot = r.status === 'online'
           ? '<span class="dot green"></span> Online'
           : '<span class="dot red"></span> Unreachable';
 
         var consoleLink = '<a class="btn-console" href="' + escHtml(r.hub.url) + '/" target="_blank">\u2197 Console</a>';
-        var removeBtn = (AUTH_STATE.canManageHubs || r.hub.canManage) ? '<button class="btn-remove" onclick="removeHub(' + idx + ')" title="Remove hub">\u2716</button>' : '';
 
         var hubMeta = [];
         var hi = r.data.hub || {};
-        if (hi.os)          hubMeta.push('<span>' + escHtml(hi.os) + '/' + escHtml(hi.arch || '') + '</span>');
-        if (hi.hostname)    hubMeta.push('<span>\uD83D\uDCBB ' + escHtml(hi.hostname) + '</span>');
+        if (hi.os) hubMeta.push('<span>' + escHtml(hi.os) + '/' + escHtml(hi.arch || '') + '</span>');
+        if (hi.hostname) hubMeta.push('<span>\uD83D\uDCBB ' + escHtml(hi.hostname) + '</span>');
         if (hi.nodeVersion) hubMeta.push('<span>node ' + escHtml(hi.nodeVersion) + '</span>');
 
         var hubCell = '<span class="hub-name">' + escHtml(r.hubName) + '</span><br><span class="hub-url">' + escHtml(r.hub.url) + '</span>';
@@ -755,20 +450,13 @@
           + '<td>' + machines.length + '</td>'
           + '<td>' + online + '</td>'
           + '<td>' + sessions + '</td>'
-          + '<td>' + consoleLink + ' ' + removeBtn + '</td>'
+          + '<td>' + consoleLink + '</td>'
           + '</tr>';
       });
 
       hubsHtml += '</tbody></table>';
       document.getElementById('hubs-content').innerHTML = hubsHtml;
 
-      // Stats
-      var hubsOnline = results.filter(function (r) { return r.status === 'online'; }).length;
-      document.getElementById('stat-hubs').innerHTML = results.length + ' <span class="online-count">(' + hubsOnline + ')</span>';
-      document.getElementById('stat-machines').innerHTML = totalMachines + ' <span class="online-count">(' + totalOnline + ')</span>';
-      document.getElementById('stat-services').innerHTML = totalServices + ' <span class="online-count">(' + totalSessions + ')</span>';
-
-      // Aggregated machines table
       var allMachines = [];
       results.forEach(function (r) {
         (r.data.machines || []).forEach(function (m) {
@@ -785,7 +473,6 @@
 
         allMachines.forEach(function (item) {
           var m = item.machine;
-
           var statusDot;
           if (!m.agentConnected) {
             statusDot = '<span class="dot red"></span> Offline';
@@ -803,7 +490,7 @@
           var name = '<div class="machine-name">' + escHtml(m.displayName || m.id) + '</div>';
           var meta = [];
           if (m.hostname) meta.push('<span>\uD83D\uDCBB ' + escHtml(m.hostname) + '</span>');
-          if (m.os)       meta.push('<span>' + escHtml(m.os) + '</span>');
+          if (m.os) meta.push('<span>' + escHtml(m.os) + '</span>');
           if (m.agentVersion) meta.push('<span>v' + escHtml(m.agentVersion) + '</span>');
           var tags = (m.tags || []).map(function (t) { return '<span class="tag">' + escHtml(t) + '</span>'; }).join('');
           if (tags) meta.push(tags);

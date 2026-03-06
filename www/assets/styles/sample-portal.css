@@ -1,0 +1,186 @@
+body {
+  background: #f4f5f7;
+}
+
+.topnav {
+  min-height: 56px;
+  flex-wrap: wrap;
+}
+
+.topnav nav a,
+.topnav .signin-link,
+.page-link-chip,
+footer a {
+  text-decoration: none;
+}
+
+.topnav nav a:hover,
+.topnav nav a.active {
+  border-bottom: 2px solid #5ee89e;
+  text-decoration: none;
+}
+
+.topnav .signin-link:hover {
+  border-bottom: 2px solid #5ee89e;
+  text-decoration: none;
+}
+
+.topnav .cta-nav {
+  background: #5ee89e;
+  color: #1a1a2e;
+  padding: 6px 16px;
+  border-radius: 4px;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.topnav .cta-nav:hover {
+  background: #4dd889;
+  color: #1a1a2e;
+}
+
+.banner {
+  max-width: 1180px;
+  margin: 20px auto 0;
+  padding: 0 24px;
+}
+
+.banner-inner {
+  background: #eef8f1;
+  border: 1px solid #cfe8d6;
+  color: #245533;
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.banner strong,
+.banner a {
+  color: #1f4a2c;
+}
+
+.banner a {
+  font-weight: 700;
+}
+
+.container {
+  max-width: 1180px;
+}
+
+.btn-console {
+  display: inline-block;
+  background: #1a1a2e;
+  color: #fff;
+  border: none;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.btn-console:hover {
+  background: #333;
+  color: #fff;
+}
+
+#operations,
+#access {
+  overflow: hidden;
+}
+
+.admin-table .pill,
+.admin-table .hub-url {
+  white-space: normal;
+}
+
+.console-pane {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  width: min(420px, calc(100vw - 32px));
+  background: #fff;
+  border: 1px solid #d8dce3;
+  border-radius: 12px;
+  box-shadow: 0 18px 48px rgba(14, 20, 33, 0.18);
+  padding: 18px 18px 16px;
+  z-index: 20;
+}
+
+.console-pane.hidden {
+  display: none;
+}
+
+.console-pane-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.console-pane h3 {
+  font-size: 1rem;
+  color: #1a1a2e;
+}
+
+.console-pane-close {
+  background: transparent;
+  border: none;
+  color: #667085;
+  cursor: pointer;
+  font-size: 1.2rem;
+  line-height: 1;
+  padding: 0;
+}
+
+.console-pane-close:hover {
+  color: #1a1a2e;
+}
+
+.console-pane p {
+  font-size: 0.92rem;
+  color: #445065;
+  margin-bottom: 10px;
+}
+
+.console-pane .highlight {
+  background: #eef8f1;
+  border: 1px solid #cfe8d6;
+  color: #245533;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 0.88rem;
+}
+
+footer a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 760px) {
+  .topnav {
+    padding: 12px 16px;
+  }
+
+  .topnav nav {
+    width: 100%;
+    order: 3;
+  }
+
+  .topnav .spacer {
+    display: none;
+  }
+
+  .banner {
+    padding: 0 16px;
+  }
+
+  .banner-inner {
+    align-items: flex-start;
+  }
+}

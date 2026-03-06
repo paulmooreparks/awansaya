@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Access Management — Awan Saya</title>
+  <link rel="stylesheet" href="/assets/styles/common.css">
+  <link rel="stylesheet" href="/assets/styles/portal.css">
+  <script src="/assets/scripts/password-toggle.js" defer></script>
+</head>
+<body>
+  <div class="topnav">
+    <a href="/" class="logo"><em>Awan</em>Saya</a>
+    <nav>
+      <a href="/portal/">Dashboard</a>
+      <a href="/portal/#operations">Hubs &amp; Machines</a>
+      <a href="/portal/#access">Access Overview</a>
+      <a href="/portal/hubs/">Manage Hubs</a>
+      <a href="/portal/access/" class="active">Manage Access</a>
+    </nav>
+    <div class="user-area">
+      <span id="user-name">Guest</span>
+      <div class="avatar" id="user-avatar">G</div>
+      <a id="signin-link" href="/sign-in/?next=%2Fportal%2Faccess%2F">Sign In</a>
+      <button id="logout-btn" class="hidden" type="button">Sign out</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="page-head">
+      <div class="page-head-copy">
+        <h1>Access Management</h1>
+        <p class="page-desc">Create users, assign portal roles, and manage per-hub visibility.</p>
+      </div>
+      <div class="page-actions">
+        <a class="page-link-chip" href="/portal/">&larr; Back to dashboard</a>
+      </div>
+    </div>
+
+    <div class="card" id="access-management">
+      <h2>&#x1F512; User and Hub Access</h2>
+      <p class="section-note">Administrative controls for portal accounts and explicit hub memberships.</p>
+
+      <div class="access-summary-grid">
+        <div class="access-summary-card">
+          <div class="label">Users</div>
+          <div class="value" id="access-stat-users">-</div>
+          <div class="meta" id="access-stat-users-meta">Loading...</div>
+        </div>
+        <div class="access-summary-card">
+          <div class="label">Portal admins</div>
+          <div class="value" id="access-stat-admins">-</div>
+          <div class="meta">Full visibility across all hubs</div>
+        </div>
+        <div class="access-summary-card">
+          <div class="label">Explicit memberships</div>
+          <div class="value" id="access-stat-memberships">-</div>
+          <div class="meta">Per-hub access grants and ownership</div>
+        </div>
+        <div class="access-summary-card">
+          <div class="label">Registered hubs</div>
+          <div class="value" id="access-stat-hubs">-</div>
+          <div class="meta">Hubs available for assignment</div>
+        </div>
+      </div>
+
+      <div class="section-stack">
+        <div class="subcard">
+          <h3>Create User</h3>
+          <p class="subcard-intro">Provision a new portal account and choose whether it has full administrative access.</p>
+          <form class="admin-form stacked-form" id="create-user-form">
+            <input name="displayName" placeholder="Display name" required>
+            <input name="email" type="email" placeholder="user@example.com" autocomplete="email" required>
+            <div class="password-field full-span">
+              <input id="create-user-password" name="password" type="password" placeholder="Temporary password" autocomplete="new-password" required>
+              <button class="password-toggle" type="button" data-password-toggle aria-controls="create-user-password" aria-pressed="false">Show</button>
+            </div>
+            <label>Portal role
+              <select name="portalRole">
+                <option value="user" selected>Standard user</option>
+                <option value="admin">Portal admin</option>
+              </select>
+            </label>
+            <div class="full-span">
+              <button type="submit">Create User</button>
+            </div>
+          </form>
+          <div class="status-msg" id="create-user-msg"></div>
+        </div>
+
+        <div class="subcard">
+          <h3>Grant Hub Access</h3>
+          <p class="subcard-intro">Grant or update a non-admin user’s access to a specific Tela hub.</p>
+          <form class="admin-form stacked-form" id="grant-access-form">
+            <select name="userId" title="User" aria-label="User" required></select>
+            <select name="hubName" title="Hub" aria-label="Hub" required></select>
+            <label>Access role
+              <select name="role" title="Access role" aria-label="Access role" required>
+                <option value="viewer">Viewer</option>
+                <option value="admin">Admin</option>
+              </select>
+            </label>
+            <div class="full-span">
+              <button type="submit">Grant Access</button>
+            </div>
+          </form>
+          <div class="status-msg" id="grant-access-msg"></div>
+        </div>
+
+        <div class="subcard">
+          <h3>User Directory</h3>
+          <p class="subcard-intro">Review all users, their portal role, and the hub visibility they currently hold.</p>
+          <div class="table-wrap" id="users-content"><p class="no-data">Loading...</p></div>
+        </div>
+
+        <div class="subcard">
+          <h3>Memberships</h3>
+          <p class="subcard-intro">Review and revoke explicit per-hub memberships. Owners remain protected here.</p>
+          <div class="table-wrap" id="memberships-content"><p class="no-data">Loading...</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <a href="/">Awan Saya</a> &middot; Powered by <a href="https://github.com/paulmooreparks/tela">Tela</a>
+    &middot; <a href="https://github.com/paulmooreparks/awansaya">GitHub</a>
+  </footer>
+
+  <script>
+    var AUTH_STATE = {
+      authEnabled: false,
+      authenticated: false,
+      canManageHubs: false,
+      user: null,
+      accessOverview: null
+    };
+
+    function escHtml(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function fetchAuthMode() {
+      return fetch('/api/auth-mode')
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          AUTH_STATE.authEnabled = !!(data && data.authEnabled);
+          AUTH_STATE.authenticated = !!(data && data.authenticated);
+          AUTH_STATE.canManageHubs = !!(data && data.canManageHubs);
+          AUTH_STATE.user = data && data.user ? data.user : null;
+        })
+        .catch(function () {
+          AUTH_STATE.authEnabled = false;
+          AUTH_STATE.authenticated = false;
+          AUTH_STATE.canManageHubs = false;
+          AUTH_STATE.user = null;
+        });
+    }
+
+    function fetchAccessOverview() {
+      return fetch('/api/admin/access')
+        .then(function (r) {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.json();
+        })
+        .then(function (data) {
+          AUTH_STATE.accessOverview = data || { users: [], hubs: [], memberships: [] };
+          return AUTH_STATE.accessOverview;
+        });
+    }
+
+    function updateUserChrome() {
+      var nameEl = document.getElementById('user-name');
+      var avatarEl = document.getElementById('user-avatar');
+      var logoutBtn = document.getElementById('logout-btn');
+      var signinLink = document.getElementById('signin-link');
+      if (AUTH_STATE.user) {
+        var name = AUTH_STATE.user.displayName || AUTH_STATE.user.email;
+        nameEl.textContent = name;
+        avatarEl.textContent = String(name).charAt(0).toUpperCase();
+        logoutBtn.classList.remove('hidden');
+        signinLink.classList.add('hidden');
+      } else {
+        nameEl.textContent = AUTH_STATE.authEnabled ? 'Signed out' : 'Guest';
+        avatarEl.textContent = AUTH_STATE.authEnabled ? '?' : 'G';
+        logoutBtn.classList.add('hidden');
+        signinLink.classList.remove('hidden');
+      }
+    }
+
+    function setStatusMessage(id, text, isError) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = text || '';
+      el.style.color = isError ? '#c0392b' : '#666';
+    }
+
+    function renderAccessUI() {
+      var overview = AUTH_STATE.accessOverview || { users: [], hubs: [], memberships: [] };
+      var users = overview.users || [];
+      var hubs = overview.hubs || [];
+      var memberships = overview.memberships || [];
+      var membershipsByUser = {};
+      var adminCount = users.filter(function (u) { return !!u.isAdmin; }).length;
+
+      memberships.forEach(function (m) {
+        if (!membershipsByUser[m.userId]) membershipsByUser[m.userId] = [];
+        membershipsByUser[m.userId].push(m);
+      });
+
+      document.getElementById('access-stat-users').textContent = String(users.length);
+      document.getElementById('access-stat-users-meta').textContent = users.length === 1 ? '1 portal account' : users.length + ' portal accounts';
+      document.getElementById('access-stat-admins').textContent = String(adminCount);
+      document.getElementById('access-stat-memberships').textContent = String(memberships.length);
+      document.getElementById('access-stat-hubs').textContent = String(hubs.length);
+
+      var userSelect = document.querySelector('#grant-access-form select[name="userId"]');
+      var hubSelect = document.querySelector('#grant-access-form select[name="hubName"]');
+      var selectableUsers = users.filter(function (u) { return !u.isAdmin; });
+
+      userSelect.innerHTML = selectableUsers.length
+        ? selectableUsers.map(function (u) {
+            return '<option value="' + u.id + '">' + escHtml(u.displayName || u.email) + ' (' + escHtml(u.email) + ')</option>';
+          }).join('')
+        : '<option value="">No non-admin users</option>';
+      userSelect.disabled = selectableUsers.length === 0;
+
+      hubSelect.innerHTML = hubs.length
+        ? hubs.map(function (h) {
+            return '<option value="' + escHtml(h.name) + '">' + escHtml(h.name) + '</option>';
+          }).join('')
+        : '<option value="">No hubs available</option>';
+      hubSelect.disabled = hubs.length === 0;
+
+      var grantAccessButton = document.querySelector('#grant-access-form button[type="submit"]');
+      if (grantAccessButton) {
+        grantAccessButton.disabled = userSelect.disabled || hubSelect.disabled;
+      }
+
+      if (users.length === 0) {
+        document.getElementById('users-content').innerHTML = '<p class="no-data">No users yet.</p>';
+      } else {
+        var usersHtml = '<table class="admin-table"><thead><tr><th>User</th><th>Type</th><th>Hub Access</th></tr></thead><tbody>';
+        users.forEach(function (u) {
+          var userMemberships = membershipsByUser[u.id] || [];
+          var accessHtml;
+          if (u.isAdmin) {
+            accessHtml = '<span class="pill admin">All hubs</span>';
+          } else if (userMemberships.length === 0) {
+            accessHtml = '<span class="no-data">No hub memberships</span>';
+          } else {
+            accessHtml = userMemberships.map(function (m) {
+              return '<span class="pill ' + escHtml(m.role) + '">' + escHtml(m.hubName) + ' · ' + escHtml(m.role) + '</span>';
+            }).join('');
+          }
+
+          usersHtml += '<tr>'
+            + '<td><strong>' + escHtml(u.displayName || u.email) + '</strong><br><span class="hub-url">' + escHtml(u.email) + '</span></td>'
+            + '<td>' + (u.isAdmin ? '<span class="pill admin">Portal admin</span>' : '<span class="pill">Standard user</span>') + '</td>'
+            + '<td>' + accessHtml + '</td>'
+            + '</tr>';
+        });
+        usersHtml += '</tbody></table>';
+        document.getElementById('users-content').innerHTML = usersHtml;
+      }
+
+      if (memberships.length === 0) {
+        document.getElementById('memberships-content').innerHTML = '<p class="no-data">No explicit hub memberships yet.</p>';
+      } else {
+        var membershipsHtml = '<table class="admin-table has-actions"><thead><tr><th>User</th><th>Hub</th><th>Role</th><th></th></tr></thead><tbody>';
+        memberships.forEach(function (m) {
+          var revokeButton = m.role === 'owner'
+            ? '<button class="btn-remove" type="button" disabled title="Hub owners cannot be removed here">Remove</button>'
+            : '<button class="btn-remove" type="button" onclick=\'revokeMembership(' + Number(m.userId) + ', ' + JSON.stringify(String(m.hubName || '')) + ')\'>Remove</button>';
+
+          membershipsHtml += '<tr>'
+            + '<td><strong>' + escHtml(m.displayName || m.email) + '</strong><br><span class="hub-url">' + escHtml(m.email) + '</span></td>'
+            + '<td>' + escHtml(m.hubName) + '</td>'
+            + '<td><span class="pill ' + escHtml(m.role) + '">' + escHtml(m.role) + '</span></td>'
+            + '<td>' + revokeButton + '</td>'
+            + '</tr>';
+        });
+        membershipsHtml += '</tbody></table>';
+        document.getElementById('memberships-content').innerHTML = membershipsHtml;
+      }
+    }
+
+    function boot() {
+      fetchAuthMode()
+        .then(function () {
+          updateUserChrome();
+          if (!AUTH_STATE.authenticated) {
+            window.location.href = '/sign-in/?next=%2Fportal%2Faccess%2F';
+            return Promise.reject(new Error('signin'));
+          }
+          if (!AUTH_STATE.canManageHubs) {
+            window.location.href = '/portal/';
+            return Promise.reject(new Error('dashboard'));
+          }
+          return fetchAccessOverview();
+        })
+        .then(function () {
+          renderAccessUI();
+        })
+        .catch(function (err) {
+          if (err && (err.message === 'signin' || err.message === 'dashboard')) return;
+          setStatusMessage('grant-access-msg', 'Failed to load access management.', true);
+        });
+    }
+
+    function handleLogout() {
+      fetch('/api/logout', { method: 'POST' })
+        .then(function () {
+          window.location.href = '/';
+        });
+    }
+
+    document.getElementById('create-user-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var payload = {
+        displayName: this.elements.displayName.value.trim(),
+        email: this.elements.email.value.trim(),
+        password: this.elements.password.value,
+        isAdmin: this.elements.portalRole.value === 'admin'
+      };
+      fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+        .then(function (r) {
+          return r.json().then(function (data) {
+            return { ok: r.ok, data: data };
+          });
+        })
+        .then(function (result) {
+          if (!result.ok) throw new Error(result.data.error || 'Failed to create user');
+          AUTH_STATE.accessOverview = result.data;
+          renderAccessUI();
+          document.getElementById('create-user-form').reset();
+          setStatusMessage('create-user-msg', 'User created.');
+        })
+        .catch(function (err) {
+          setStatusMessage('create-user-msg', err.message, true);
+        });
+    });
+
+    document.getElementById('grant-access-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var payload = {
+        userId: Number(this.elements.userId.value),
+        hubName: this.elements.hubName.value,
+        role: this.elements.role.value
+      };
+      fetch('/api/admin/memberships', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+        .then(function (r) {
+          return r.json().then(function (data) {
+            return { ok: r.ok, data: data };
+          });
+        })
+        .then(function (result) {
+          if (!result.ok) throw new Error(result.data.error || 'Failed to grant access');
+          AUTH_STATE.accessOverview = result.data;
+          renderAccessUI();
+          setStatusMessage('grant-access-msg', 'Hub access updated.');
+        })
+        .catch(function (err) {
+          setStatusMessage('grant-access-msg', err.message, true);
+        });
+    });
+
+    window.revokeMembership = function (userId, hubName) {
+      if (!confirm('Remove access to ' + hubName + '?')) return;
+      fetch('/api/admin/memberships?userId=' + encodeURIComponent(userId) + '&hubName=' + encodeURIComponent(hubName), {
+        method: 'DELETE'
+      })
+        .then(function (r) {
+          return r.json().then(function (data) {
+            return { ok: r.ok, data: data };
+          });
+        })
+        .then(function (result) {
+          if (!result.ok) throw new Error(result.data.error || 'Failed to remove access');
+          AUTH_STATE.accessOverview = result.data;
+          renderAccessUI();
+          setStatusMessage('grant-access-msg', 'Hub access removed.');
+        })
+        .catch(function (err) {
+          setStatusMessage('grant-access-msg', err.message, true);
+        });
+    };
+
+    document.getElementById('logout-btn').addEventListener('click', handleLogout);
+    boot();
+  </script>
+</body>
+</html>
