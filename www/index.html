@@ -29,6 +29,11 @@
     .topnav nav a { color: #ccc; text-decoration: none; padding: 4px 0; }
     .topnav nav a:hover { color: #fff; border-bottom: 2px solid #5ee89e; }
     .topnav .spacer { flex: 1; }
+    .topnav .signin-link {
+      color: #ddd; text-decoration: none; font-size: 0.9rem; font-weight: 600;
+      padding: 4px 0; margin-right: 8px;
+    }
+    .topnav .signin-link:hover { color: #fff; border-bottom: 2px solid #5ee89e; }
     .topnav .cta-nav { background: #5ee89e; color: #1a1a2e; padding: 6px 16px; border-radius: 4px; text-decoration: none; font-weight: 600; font-size: 0.85rem; }
     .topnav .cta-nav:hover { background: #4dd889; }
 
@@ -180,6 +185,7 @@
       <a href="/portal/">Portal</a>
     </nav>
     <div class="spacer"></div>
+    <a href="/sign-in/?next=%2Fportal%2F" class="signin-link">Sign In</a>
     <a href="/portal/" class="cta-nav">Open Portal</a>
   </div>
 
