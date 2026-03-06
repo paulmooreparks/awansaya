@@ -144,6 +144,26 @@ Relevant environment variables:
 - `AWANSAYA_DB_PASSWORD`
 - `DATABASE_URL` (set automatically in `docker-compose.yml`)
 
+### Bootstrap the first admin user
+
+The portal can create its first admin user automatically on startup when the `users` table is empty.
+
+Set these environment variables before starting the stack:
+
+- `AWANSAYA_BOOTSTRAP_EMAIL`
+- `AWANSAYA_BOOTSTRAP_PASSWORD`
+- `AWANSAYA_BOOTSTRAP_NAME` (optional; defaults to `Paul`)
+
+Example:
+
+```env
+AWANSAYA_BOOTSTRAP_EMAIL=you@example.com
+AWANSAYA_BOOTSTRAP_PASSWORD=choose-a-strong-password
+AWANSAYA_BOOTSTRAP_NAME=Your Name
+```
+
+After the first startup creates the admin account, the portal exposes a login form at [www/portal/index.html](www/portal/index.html), and authenticated admins can manage hubs without using the bearer token header.
+
 ## Development
 
 ```bash

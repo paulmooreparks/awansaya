@@ -33,6 +33,11 @@
       width: 30px; height: 30px; border-radius: 50%; background: #5ee89e; color: #1a1a2e;
       display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem;
     }
+    .topnav .user-area button {
+      background: transparent; color: #ddd; border: 1px solid #445; border-radius: 4px;
+      padding: 4px 10px; cursor: pointer; font-size: 0.8rem;
+    }
+    .topnav .user-area button:hover { color: #fff; border-color: #5ee89e; }
 
     /* Layout */
     .container { max-width: 1100px; margin: 0 auto; padding: 24px 20px; }
@@ -130,6 +135,19 @@
       text-align: center; padding: 32px 16px; color: #888;
     }
     .auth-placeholder .icon { font-size: 2rem; margin-bottom: 8px; }
+    .auth-form { display: flex; flex-direction: column; gap: 10px; max-width: 340px; }
+    .auth-form input {
+      padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem;
+    }
+    .auth-form button {
+      background: #1a1a2e; color: #fff; border: none; padding: 8px 14px;
+      border-radius: 4px; cursor: pointer; font-weight: 600;
+    }
+    .auth-form button:hover { background: #2c2c45; }
+    .auth-note { color: #666; font-size: 0.85rem; margin-top: 8px; }
+    .auth-ok { color: #2d7d46; }
+    .auth-warning { color: #9a6700; }
+    .auth-error { color: #c0392b; margin-top: 8px; font-size: 0.85rem; }
 
     /* History */
     .history-list { list-style: none; padding: 0; font-size: 0.85rem; max-height: 280px; overflow-y: auto; }
@@ -162,6 +180,7 @@
     <div class="user-area">
       <span id="user-name">Guest</span>
       <div class="avatar" id="user-avatar">G</div>
+      <button id="logout-btn" style="display:none" type="button">Log out</button>
     </div>
   </div>
 
@@ -219,12 +238,7 @@
     <!-- Auth placeholder -->
     <div class="card">
       <h2>&#x1F512; Authentication</h2>
-      <div class="auth-placeholder">
-        <div class="icon">&#x1F512;</div>
-        <p><strong>SSO / Identity coming soon</strong></p>
-        <p>The portal will support OAuth2/OIDC for user authentication,<br>
-           role-based access control, and API keys for automation.</p>
-      </div>
+      <div id="auth-content" class="auth-placeholder"></div>
     </div>
   </div>
 
@@ -235,11 +249,18 @@
 
   <script>
     // ── Hub registry ────────────────────────────────────────────────
-    // Hub list is stored server-side in config.json, accessed via /api/hubs.
+    // Hub list is stored server-side in PostgreSQL, accessed via /api/hubs.
     // Add and remove operations go through POST/DELETE /api/hubs.
 
     var HUBS = [];
-    var MANAGE_LOCKED = false;  // true when AWANSAYA_API_TOKEN is set on server
+    var AUTH_STATE = {
+      manageLocked: false,
+      authEnabled: false,
+      bootstrapRequired: false,
+      authenticated: false,
+      canManageHubs: false,
+      user: null
+    };
 
     function fetchHubList() {
       return fetch('/api/hubs')
@@ -258,18 +279,127 @@
       return fetch('/api/auth-mode')
         .then(function (r) { return r.json(); })
         .then(function (data) {
-          MANAGE_LOCKED = !!(data && data.manageLocked);
+          AUTH_STATE.manageLocked = !!(data && data.manageLocked);
+          AUTH_STATE.authEnabled = !!(data && data.authEnabled);
+          AUTH_STATE.bootstrapRequired = !!(data && data.bootstrapRequired);
+          AUTH_STATE.authenticated = !!(data && data.authenticated);
+          AUTH_STATE.canManageHubs = !!(data && data.canManageHubs);
+          AUTH_STATE.user = data && data.user ? data.user : null;
         })
-        .catch(function () { MANAGE_LOCKED = false; });
+        .catch(function () {
+          AUTH_STATE.manageLocked = false;
+          AUTH_STATE.authEnabled = false;
+          AUTH_STATE.bootstrapRequired = false;
+          AUTH_STATE.authenticated = false;
+          AUTH_STATE.canManageHubs = false;
+          AUTH_STATE.user = null;
+        });
+    }
+
+    function escHtml(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function updateUserChrome() {
+      var nameEl = document.getElementById('user-name');
+      var avatarEl = document.getElementById('user-avatar');
+      var logoutBtn = document.getElementById('logout-btn');
+      if (AUTH_STATE.user) {
+        var name = AUTH_STATE.user.displayName || AUTH_STATE.user.email;
+        nameEl.textContent = name;
+        avatarEl.textContent = String(name).charAt(0).toUpperCase();
+        logoutBtn.style.display = 'inline-block';
+      } else {
+        nameEl.textContent = AUTH_STATE.authEnabled ? 'Signed out' : 'Guest';
+        avatarEl.textContent = AUTH_STATE.authEnabled ? '?' : 'G';
+        logoutBtn.style.display = 'none';
+      }
+    }
+
+    function renderAuthCard() {
+      var el = document.getElementById('auth-content');
+      if (AUTH_STATE.bootstrapRequired) {
+        el.innerHTML = '<div class="auth-placeholder">'
+          + '<div class="icon">&#x26A0;&#xFE0F;</div>'
+          + '<p><strong>No users configured yet</strong></p>'
+          + '<p class="auth-warning">Set <code>AWANSAYA_BOOTSTRAP_EMAIL</code> and <code>AWANSAYA_BOOTSTRAP_PASSWORD</code> on the server, then restart the portal container.</p>'
+          + '</div>';
+        return;
+      }
+      if (!AUTH_STATE.authEnabled) {
+        el.innerHTML = '<div class="auth-placeholder">'
+          + '<div class="icon">&#x1F512;</div>'
+          + '<p><strong>Management is using token-only mode</strong></p>'
+          + '<p class="auth-note">You can add user login once a bootstrap admin account is configured.</p>'
+          + '</div>';
+        return;
+      }
+      if (AUTH_STATE.authenticated) {
+        var name = AUTH_STATE.user.displayName || AUTH_STATE.user.email;
+        el.innerHTML = '<p class="auth-ok"><strong>Signed in as ' + escHtml(name) + '</strong></p>'
+          + '<p class="auth-note">Email: ' + escHtml(AUTH_STATE.user.email) + '</p>'
+          + '<p class="auth-note">Role: ' + (AUTH_STATE.user.isAdmin ? 'admin' : 'user') + '</p>'
+          + '<p class="auth-note">' + (AUTH_STATE.canManageHubs ? 'You can manage hubs.' : 'You can browse the portal.') + '</p>';
+        return;
+      }
+      el.innerHTML = '<form id="login-form" class="auth-form">'
+        + '<input name="email" type="email" placeholder="Email" required>'
+        + '<input name="password" type="password" placeholder="Password" required>'
+        + '<button type="submit">Log in</button>'
+        + '<div class="auth-note">Sign in as an admin to add or remove hubs.</div>'
+        + '<div class="auth-error" id="login-error" style="display:none"></div>'
+        + '</form>';
+      document.getElementById('login-form').addEventListener('submit', handleLogin);
+    }
+
+    function refreshAuthUI() {
+      updateUserChrome();
+      renderAuthCard();
     }
 
     function boot() {
       Promise.all([fetchHubList(), fetchAuthMode()]).then(function () {
-        if (MANAGE_LOCKED) {
+        refreshAuthUI();
+        if (!AUTH_STATE.canManageHubs) {
           document.getElementById('add-hub-form').style.display = 'none';
+        } else {
+          document.getElementById('add-hub-form').style.display = 'flex';
         }
         initDashboard();
       });
+    }
+
+    function handleLogin(e) {
+      e.preventDefault();
+      var email = e.target.elements.email.value.trim();
+      var password = e.target.elements.password.value;
+      fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email, password: password })
+      })
+        .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+        .then(function (result) {
+          if (!result.ok) throw new Error(result.data.error || 'Login failed');
+          return fetchAuthMode();
+        })
+        .then(function () {
+          window.location.reload();
+        })
+        .catch(function (err) {
+          var errorEl = document.getElementById('login-error');
+          if (errorEl) {
+            errorEl.style.display = 'block';
+            errorEl.textContent = err.message;
+          }
+        });
+    }
+
+    function handleLogout() {
+      fetch('/api/logout', { method: 'POST' })
+        .then(function () {
+          window.location.reload();
+        });
     }
 
     function initDashboard() {
@@ -324,10 +454,6 @@
     }
 
     // ── Helpers ─────────────────────────────────────────────────────
-    function escHtml(s) {
-      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    }
-
     function timeAgo(isoStr) {
       if (!isoStr) return '\u2014';
       var diff = (Date.now() - new Date(isoStr).getTime()) / 1000;
@@ -415,7 +541,7 @@
           : '<span class="dot red"></span> Unreachable';
 
         var consoleLink = '<a class="btn-console" href="' + escHtml(r.hub.url) + '/" target="_blank">\u2197 Console</a>';
-        var removeBtn = MANAGE_LOCKED ? '' : '<button class="btn-remove" onclick="removeHub(' + idx + ')" title="Remove hub">\u2716</button>';
+        var removeBtn = AUTH_STATE.canManageHubs ? '<button class="btn-remove" onclick="removeHub(' + idx + ')" title="Remove hub">\u2716</button>' : '';
 
         var hubMeta = [];
         var hi = r.data.hub || {};
@@ -540,6 +666,7 @@
 
     poll();
     setInterval(poll, 5000);
+  document.getElementById('logout-btn').addEventListener('click', handleLogout);
     } // end initDashboard
 
     boot();

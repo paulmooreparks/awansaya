@@ -10,6 +10,7 @@
 */
 const http = require('http');
 const https = require('https');
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const { Pool } = require('pg');
@@ -21,6 +22,11 @@ const CONFIG_PATH = path.join(WWW_DIR, 'portal', 'config.json');
 const DATABASE_URL = process.env.DATABASE_URL || 'postgres://awansaya:awansaya-dev-password@db:5432/awansaya';
 const DB_CONNECT_RETRIES = parseInt(process.env.DB_CONNECT_RETRIES || '30', 10);
 const DB_CONNECT_DELAY_MS = parseInt(process.env.DB_CONNECT_DELAY_MS || '2000', 10);
+const SESSION_COOKIE_NAME = 'awansaya_session';
+const SESSION_TTL_DAYS = parseInt(process.env.AWANSAYA_SESSION_TTL_DAYS || '30', 10);
+const BOOTSTRAP_EMAIL = (process.env.AWANSAYA_BOOTSTRAP_EMAIL || '').trim().toLowerCase();
+const BOOTSTRAP_PASSWORD = process.env.AWANSAYA_BOOTSTRAP_PASSWORD || '';
+const BOOTSTRAP_NAME = (process.env.AWANSAYA_BOOTSTRAP_NAME || 'Paul').trim();
 
 const pool = new Pool({
 	connectionString: DATABASE_URL,
@@ -41,12 +47,17 @@ const MIME = {
 
 // ── API routes ─────────────────────────────────────────────────────
 
-function checkAuth(req, res) {
-  if (!API_TOKEN) return true;                       // open mode
-  const hdr = req.headers['authorization'] || '';
-  if (hdr === 'Bearer ' + API_TOKEN) return true;
-  res.writeHead(401, { 'Content-Type': 'application/json' });
-  res.end(JSON.stringify({ error: 'unauthorized' }));
+function hasBearerAdmin(req) {
+  if (!API_TOKEN) return false;
+  const hdr = req.headers.authorization || '';
+  return hdr === 'Bearer ' + API_TOKEN;
+}
+
+async function checkManageAuth(req, res) {
+  if (hasBearerAdmin(req)) return true;
+  const user = await getSessionUser(req, true);
+  if (user && user.isAdmin) return true;
+  jsonError(res, 401, 'unauthorized');
   return false;
 }
 
@@ -81,6 +92,29 @@ async function initDatabase() {
   `);
 
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id BIGSERIAL PRIMARY KEY,
+      email TEXT NOT NULL UNIQUE,
+      display_name TEXT NOT NULL,
+      password_hash TEXT NOT NULL,
+      is_admin BOOLEAN NOT NULL DEFAULT FALSE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS user_sessions (
+      id BIGSERIAL PRIMARY KEY,
+      user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      token_hash TEXT NOT NULL UNIQUE,
+      expires_at TIMESTAMPTZ NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`
     CREATE OR REPLACE FUNCTION set_updated_at() RETURNS TRIGGER AS $$
     BEGIN
       NEW.updated_at = NOW();
@@ -93,12 +127,153 @@ async function initDatabase() {
     DROP TRIGGER IF EXISTS hubs_set_updated_at ON hubs
   `);
 
+	await pool.query(`
+		DROP TRIGGER IF EXISTS users_set_updated_at ON users
+	`);
+
   await pool.query(`
     CREATE TRIGGER hubs_set_updated_at
     BEFORE UPDATE ON hubs
     FOR EACH ROW
     EXECUTE FUNCTION set_updated_at()
   `);
+
+  await pool.query(`
+    CREATE TRIGGER users_set_updated_at
+    BEFORE UPDATE ON users
+    FOR EACH ROW
+    EXECUTE FUNCTION set_updated_at()
+  `);
+}
+
+function hashPassword(password, saltHex) {
+  const salt = saltHex || crypto.randomBytes(16).toString('hex');
+  const hash = crypto.scryptSync(password, salt, 64).toString('hex');
+  return `scrypt:${salt}:${hash}`;
+}
+
+function verifyPassword(password, stored) {
+  if (!stored || !stored.startsWith('scrypt:')) return false;
+  const parts = stored.split(':');
+  if (parts.length !== 3) return false;
+  const salt = parts[1];
+  const expected = Buffer.from(parts[2], 'hex');
+  const actual = crypto.scryptSync(password, salt, expected.length);
+  return expected.length === actual.length && crypto.timingSafeEqual(expected, actual);
+}
+
+function sha256(value) {
+  return crypto.createHash('sha256').update(value).digest('hex');
+}
+
+function parseCookies(req) {
+  const raw = req.headers.cookie || '';
+  const out = {};
+  for (const part of raw.split(';')) {
+    const idx = part.indexOf('=');
+    if (idx === -1) continue;
+    const key = part.slice(0, idx).trim();
+    const value = part.slice(idx + 1).trim();
+    if (key) out[key] = decodeURIComponent(value);
+  }
+  return out;
+}
+
+function appendSetCookie(res, cookie) {
+  const prev = res.getHeader('Set-Cookie');
+  if (!prev) {
+    res.setHeader('Set-Cookie', cookie);
+    return;
+  }
+  if (Array.isArray(prev)) {
+    res.setHeader('Set-Cookie', prev.concat(cookie));
+    return;
+  }
+  res.setHeader('Set-Cookie', [prev, cookie]);
+}
+
+function isSecureRequest(req) {
+  return !!req.socket.encrypted || req.headers['x-forwarded-proto'] === 'https';
+}
+
+function buildSessionCookie(req, token, maxAgeSeconds) {
+  const parts = [
+    `${SESSION_COOKIE_NAME}=${encodeURIComponent(token)}`,
+    'Path=/',
+    'HttpOnly',
+    'SameSite=Lax',
+    `Max-Age=${maxAgeSeconds}`,
+  ];
+  if (isSecureRequest(req)) parts.push('Secure');
+  return parts.join('; ');
+}
+
+function clearSessionCookie(req, res) {
+  appendSetCookie(res, buildSessionCookie(req, '', 0));
+}
+
+async function countUsers() {
+  const result = await pool.query('SELECT COUNT(*)::int AS count FROM users');
+  return result.rows[0].count;
+}
+
+async function ensureBootstrapAdmin() {
+  const userCount = await countUsers();
+  if (userCount > 0) return;
+  if (!BOOTSTRAP_EMAIL || !BOOTSTRAP_PASSWORD) {
+    console.warn('[awansaya] no users configured; set AWANSAYA_BOOTSTRAP_EMAIL and AWANSAYA_BOOTSTRAP_PASSWORD to create the first admin');
+    return;
+  }
+  await pool.query(
+    'INSERT INTO users (email, display_name, password_hash, is_admin) VALUES ($1, $2, $3, TRUE)',
+    [BOOTSTRAP_EMAIL, BOOTSTRAP_NAME || BOOTSTRAP_EMAIL, hashPassword(BOOTSTRAP_PASSWORD)]
+  );
+  console.log(`[awansaya] bootstrapped admin user: ${BOOTSTRAP_EMAIL}`);
+}
+
+async function findUserByEmail(email) {
+  const result = await pool.query(
+    'SELECT id, email, display_name AS "displayName", password_hash AS "passwordHash", is_admin AS "isAdmin" FROM users WHERE email = $1',
+    [email.trim().toLowerCase()]
+  );
+  return result.rows[0] || null;
+}
+
+async function createSession(userId) {
+  const token = crypto.randomBytes(32).toString('hex');
+  const tokenHash = sha256(token);
+  const maxAgeSeconds = SESSION_TTL_DAYS * 24 * 60 * 60;
+  await pool.query(
+    'INSERT INTO user_sessions (user_id, token_hash, expires_at) VALUES ($1, $2, NOW() + ($3 * INTERVAL \'1 second\'))',
+    [userId, tokenHash, maxAgeSeconds]
+  );
+  return { token, maxAgeSeconds };
+}
+
+async function getSessionUser(req, touch) {
+  const cookies = parseCookies(req);
+  const rawToken = cookies[SESSION_COOKIE_NAME];
+  if (!rawToken) return null;
+  const tokenHash = sha256(rawToken);
+  const result = await pool.query(
+    `SELECT u.id, u.email, u.display_name AS "displayName", u.is_admin AS "isAdmin", s.id AS "sessionId"
+     FROM user_sessions s
+     JOIN users u ON u.id = s.user_id
+     WHERE s.token_hash = $1 AND s.expires_at > NOW()` ,
+    [tokenHash]
+  );
+  const row = result.rows[0] || null;
+  if (row && touch) {
+    await pool.query('UPDATE user_sessions SET last_seen_at = NOW() WHERE id = $1', [row.sessionId]);
+  }
+  return row;
+}
+
+async function revokeSession(req) {
+  const cookies = parseCookies(req);
+  const rawToken = cookies[SESSION_COOKIE_NAME];
+  if (!rawToken) return;
+  await pool.query('DELETE FROM user_sessions WHERE token_hash = $1', [sha256(rawToken)]);
 }
 
 function readLegacyConfig() {
@@ -193,8 +368,64 @@ function readBody(req, cb) {
 }
 
 // GET /api/auth-mode — tell the browser whether management is locked
-function apiAuthMode(req, res) {
-  jsonOK(res, { manageLocked: !!API_TOKEN });
+async function apiAuthMode(req, res) {
+  try {
+    const user = await getSessionUser(req, true);
+    const userCount = await countUsers();
+    jsonOK(res, {
+      manageLocked: !!API_TOKEN || userCount > 0,
+      authEnabled: userCount > 0,
+      bootstrapRequired: userCount === 0,
+      authenticated: !!user,
+      canManageHubs: hasBearerAdmin(req) || !!(user && user.isAdmin),
+      user: user ? {
+        email: user.email,
+        displayName: user.displayName,
+        isAdmin: !!user.isAdmin,
+      } : null,
+    });
+  } catch (err) {
+    jsonError(res, 500, 'database error');
+  }
+}
+
+async function apiLogin(req, res) {
+  readBody(req, async (err, body) => {
+    if (err || !body) return jsonError(res, 400, 'invalid JSON body');
+    const email = String(body.email || '').trim().toLowerCase();
+    const password = String(body.password || '');
+    if (!email || !password) return jsonError(res, 400, 'email and password are required');
+
+    try {
+      const user = await findUserByEmail(email);
+      if (!user || !verifyPassword(password, user.passwordHash)) {
+        return jsonError(res, 401, 'invalid credentials');
+      }
+      const session = await createSession(user.id);
+      appendSetCookie(res, buildSessionCookie(req, session.token, session.maxAgeSeconds));
+      jsonOK(res, {
+        authenticated: true,
+        canManageHubs: !!user.isAdmin,
+        user: {
+          email: user.email,
+          displayName: user.displayName,
+          isAdmin: !!user.isAdmin,
+        },
+      });
+    } catch (dbErr) {
+      jsonError(res, 500, 'database error');
+    }
+  });
+}
+
+async function apiLogout(req, res) {
+  try {
+    await revokeSession(req);
+    clearSessionCookie(req, res);
+    jsonOK(res, { authenticated: false });
+  } catch (err) {
+    jsonError(res, 500, 'database error');
+  }
 }
 
 // GET /api/hubs — return the hub list from PostgreSQL (tokens stripped)
@@ -210,7 +441,8 @@ async function apiGetHubs(req, res) {
 
 // POST /api/hubs — add a hub { name, url, viewerToken }
 function apiAddHub(req, res) {
-  if (!checkAuth(req, res)) return;
+  checkManageAuth(req, res).then(allowed => {
+    if (!allowed) return;
   readBody(req, (err, body) => {
     if (err || !body) return jsonError(res, 400, 'invalid JSON body');
     const name        = (body.name || '').trim();
@@ -227,11 +459,12 @@ function apiAddHub(req, res) {
 			jsonError(res, err2.statusCode || 500, err2.statusCode ? err2.message : 'database error');
 		});
   });
+  });
 }
 
 // DELETE /api/hubs?name=<name> — remove a hub by name
 async function apiDeleteHub(req, res) {
-  if (!checkAuth(req, res)) return;
+  if (!await checkManageAuth(req, res)) return;
   const u = new URL(req.url, 'http://localhost');
   const name = (u.searchParams.get('name') || '').trim();
   if (!name) return jsonError(res, 400, 'name query parameter is required');
@@ -307,6 +540,14 @@ async function serve(req, res) {
     if (method === 'GET' || method === 'HEAD') return apiAuthMode(req, res);
     res.writeHead(405); res.end(); return;
   }
+  if (urlPath === '/api/login') {
+    if (method === 'POST') return apiLogin(req, res);
+    res.writeHead(405); res.end(); return;
+  }
+  if (urlPath === '/api/logout') {
+    if (method === 'POST') return apiLogout(req, res);
+    res.writeHead(405); res.end(); return;
+  }
   if (urlPath === '/api/hubs') {
     if (method === 'GET' || method === 'HEAD') return apiGetHubs(req, res);
     if (method === 'POST')   return apiAddHub(req, res);
@@ -365,6 +606,7 @@ async function main() {
   await connectWithRetry();
   await initDatabase();
   await importLegacyConfigIfNeeded();
+	await ensureBootstrapAdmin();
   server.listen(PORT, () => {
     console.log(`[awansaya] listening on :${PORT}`);
   });
