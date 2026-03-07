@@ -954,6 +954,21 @@ async function serve(req, res) {
 		if (!user) return;
 	}
 
+  // Well-known discovery (RFC 8615)
+  if (urlPath === '/.well-known/tela') {
+    if (method === 'GET' || method === 'HEAD') {
+      const body = JSON.stringify({ hub_directory: '/api/hubs' });
+      res.writeHead(200, {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Cache-Control': 'public, max-age=86400',
+        'Access-Control-Allow-Origin': '*',
+      });
+      res.end(method === 'HEAD' ? '' : body);
+      return;
+    }
+    res.writeHead(405); res.end(); return;
+  }
+
   // API routes
   if (urlPath === '/api/auth-mode') {
     if (method === 'GET' || method === 'HEAD') return apiAuthMode(req, res);
