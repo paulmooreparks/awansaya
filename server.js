@@ -126,6 +126,26 @@ async function initDatabase() {
   `);
 
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS user_api_tokens (
+      id BIGSERIAL PRIMARY KEY,
+      user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      token_hash TEXT NOT NULL UNIQUE,
+      token_prefix TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      last_used_at TIMESTAMPTZ
+    )
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_user_api_tokens_user_id ON user_api_tokens(user_id)
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_user_api_tokens_token_hash ON user_api_tokens(token_hash)
+  `);
+
+  await pool.query(`
     ALTER TABLE hubs
     ADD COLUMN IF NOT EXISTS owner_user_id BIGINT REFERENCES users(id) ON DELETE SET NULL
   `);
@@ -302,22 +322,45 @@ async function createSession(userId) {
 }
 
 async function getSessionUser(req, touch) {
+  // 1. Try session cookie first (browser auth)
   const cookies = parseCookies(req);
   const rawToken = cookies[SESSION_COOKIE_NAME];
-  if (!rawToken) return null;
-  const tokenHash = sha256(rawToken);
-  const result = await pool.query(
-    `SELECT u.id, u.email, u.display_name AS "displayName", u.is_admin AS "isAdmin", s.id AS "sessionId"
-     FROM user_sessions s
-     JOIN users u ON u.id = s.user_id
-     WHERE s.token_hash = $1 AND s.expires_at > NOW()` ,
-    [tokenHash]
-  );
-  const row = result.rows[0] || null;
-  if (row && touch) {
-    await pool.query('UPDATE user_sessions SET last_seen_at = NOW() WHERE id = $1', [row.sessionId]);
+  if (rawToken) {
+    const tokenHash = sha256(rawToken);
+    const result = await pool.query(
+      `SELECT u.id, u.email, u.display_name AS "displayName", u.is_admin AS "isAdmin", s.id AS "sessionId"
+       FROM user_sessions s
+       JOIN users u ON u.id = s.user_id
+       WHERE s.token_hash = $1 AND s.expires_at > NOW()` ,
+      [tokenHash]
+    );
+    const row = result.rows[0] || null;
+    if (row && touch) {
+      await pool.query('UPDATE user_sessions SET last_seen_at = NOW() WHERE id = $1', [row.sessionId]);
+    }
+    if (row) return row;
   }
-  return row;
+
+  // 2. Try Bearer token (CLI / personal API token)
+  const authHeader = req.headers.authorization || '';
+  if (authHeader.startsWith('Bearer ')) {
+    const bearer = authHeader.slice(7);
+    const bearerHash = sha256(bearer);
+    const result = await pool.query(
+      `SELECT u.id, u.email, u.display_name AS "displayName", u.is_admin AS "isAdmin", t.id AS "apiTokenId"
+       FROM user_api_tokens t
+       JOIN users u ON u.id = t.user_id
+       WHERE t.token_hash = $1`,
+      [bearerHash]
+    );
+    const row = result.rows[0] || null;
+    if (row && touch) {
+      await pool.query('UPDATE user_api_tokens SET last_used_at = NOW() WHERE id = $1', [row.apiTokenId]);
+    }
+    if (row) return row;
+  }
+
+  return null;
 }
 
 async function revokeSession(req) {
@@ -817,6 +860,94 @@ async function apiAdminDeleteMembership(req, res) {
   }
 }
 
+// ── Personal API Tokens ────────────────────────────────────────────
+
+// GET /api/tokens — list the authenticated user's API tokens (no secrets)
+async function apiListTokens(req, res) {
+  try {
+    const user = await requireAuthenticated(req, res);
+    if (!user) return;
+    const result = await pool.query(
+      `SELECT id, name, token_prefix AS "tokenPrefix", created_at AS "createdAt", last_used_at AS "lastUsedAt"
+       FROM user_api_tokens
+       WHERE user_id = $1
+       ORDER BY created_at DESC`,
+      [user.id]
+    );
+    jsonOK(res, { tokens: result.rows });
+  } catch (err) {
+    jsonError(res, 500, 'database error');
+  }
+}
+
+// POST /api/tokens — generate a new personal API token { name }
+// Returns the raw token exactly once.
+async function apiCreateToken(req, res) {
+  const user = await requireAuthenticated(req, res);
+  if (!user) return;
+  readBody(req, async (err, body) => {
+    if (err || !body) return jsonError(res, 400, 'invalid JSON body');
+    const name = String(body.name || '').trim();
+    if (!name) return jsonError(res, 400, 'name is required');
+    if (name.length > 128) return jsonError(res, 400, 'name must be 128 characters or fewer');
+
+    try {
+      // Count existing tokens to enforce a reasonable limit
+      const countResult = await pool.query(
+        'SELECT COUNT(*)::int AS count FROM user_api_tokens WHERE user_id = $1',
+        [user.id]
+      );
+      if (countResult.rows[0].count >= 25) {
+        return jsonError(res, 400, 'token limit reached (25); revoke an existing token first');
+      }
+
+      const rawToken = 'tela_' + crypto.randomBytes(32).toString('hex');
+      const tokenHash = sha256(rawToken);
+      const tokenPrefix = rawToken.slice(0, 12);
+
+      await pool.query(
+        'INSERT INTO user_api_tokens (user_id, name, token_hash, token_prefix) VALUES ($1, $2, $3, $4)',
+        [user.id, name, tokenHash, tokenPrefix]
+      );
+
+      // Return the raw token exactly once
+      jsonOK(res, { token: rawToken, tokenPrefix, name });
+    } catch (err2) {
+      jsonError(res, 500, 'database error');
+    }
+  });
+}
+
+// DELETE /api/tokens?id=<id> — revoke a personal API token
+async function apiDeleteToken(req, res) {
+  const user = await requireAuthenticated(req, res);
+  if (!user) return;
+  const u = new URL(req.url, 'http://localhost');
+  const tokenId = Number(u.searchParams.get('id'));
+  if (!Number.isInteger(tokenId) || tokenId <= 0) {
+    return jsonError(res, 400, 'valid id is required');
+  }
+
+  try {
+    const result = await pool.query(
+      'DELETE FROM user_api_tokens WHERE id = $1 AND user_id = $2',
+      [tokenId, user.id]
+    );
+    if (result.rowCount === 0) return jsonError(res, 404, 'token not found');
+    // Return updated token list
+    const listResult = await pool.query(
+      `SELECT id, name, token_prefix AS "tokenPrefix", created_at AS "createdAt", last_used_at AS "lastUsedAt"
+       FROM user_api_tokens
+       WHERE user_id = $1
+       ORDER BY created_at DESC`,
+      [user.id]
+    );
+    jsonOK(res, { tokens: listResult.rows });
+  } catch (err) {
+    jsonError(res, 500, 'database error');
+  }
+}
+
 // GET /api/hubs — return the visible hub list for the authenticated user.
 async function apiGetHubs(req, res) {
   try {
@@ -999,6 +1130,12 @@ async function serve(req, res) {
   if (urlPath === '/api/admin/memberships') {
     if (method === 'POST') return apiAdminUpsertMembership(req, res);
     if (method === 'DELETE') return apiAdminDeleteMembership(req, res);
+    res.writeHead(405); res.end(); return;
+  }
+  if (urlPath === '/api/tokens') {
+    if (method === 'GET' || method === 'HEAD') return apiListTokens(req, res);
+    if (method === 'POST') return apiCreateToken(req, res);
+    if (method === 'DELETE') return apiDeleteToken(req, res);
     res.writeHead(405); res.end(); return;
   }
 
