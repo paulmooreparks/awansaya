@@ -13,11 +13,6 @@
     <a href="/" class="logo"><em>Awan</em>Saya</a>
     <nav>
       <a href="/portal/" class="active">Dashboard</a>
-      <a href="/portal/#operations">Hubs &amp; Machines</a>
-      <a id="access-nav-link" href="/portal/#access" class="hidden">Access</a>
-      <a href="/portal/#activity">Activity</a>
-      <a id="hub-manage-nav-link" href="/portal/hubs/" class="hidden">Manage Hubs</a>
-      <a id="manage-nav-link" href="/portal/access/" class="hidden">Manage Access</a>
     </nav>
     <div class="user-area">
       <span id="user-name">Guest</span>
@@ -28,37 +23,49 @@
   </div>
 
   <div class="container">
-    <div class="page-head">
-      <div class="page-head-copy">
-        <h1>Dashboard</h1>
-        <p class="page-desc">Multi-hub management for Tela connectivity fabric</p>
-      </div>
-    </div>
+    <div class="page-layout">
+      <aside class="side-nav" aria-label="Section navigation">
+        <div class="side-nav-panel">
+          <div class="side-nav-title">On this page</div>
+          <nav class="side-nav-links">
+            <a href="/portal/">Top</a>
+            <a href="/portal/#operations">Hubs &amp; Machines</a>
+            <a id="access-nav-link" href="/portal/#access" class="hidden">Access Overview</a>
+            <a href="/portal/#activity">Recent Activity</a>
+          </nav>
+        </div>
+      </aside>
 
-    <div class="card" id="operations">
+      <div class="page-main">
+        <div class="page-head">
+          <div class="page-head-copy">
+            <h1>Dashboard</h1>
+            <p class="page-desc">Multi-hub management for Tela connectivity fabric</p>
+          </div>
+        </div>
+
+        <div class="card" id="operations">
       <div class="card-head">
         <div class="card-head-copy">
           <h2><span class="info-heading">&#x1F5A7; Hubs and Machines <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About Hubs and Machines">?</button><span class="info-tip-popup" role="tooltip">At-a-glance operational totals across the Tela hubs and machines visible to you.</span></span></span></h2>
         </div>
         <div class="card-actions">
+          <button class="panel-action-button" id="operations-refresh-btn" type="button">Refresh</button>
           <a class="page-link-chip hidden" id="dashboard-hubs-manage-link" href="/portal/hubs/">Manage Hubs</a>
         </div>
       </div>
       <div class="access-summary-grid">
         <div class="access-summary-card">
-          <div class="label">Hubs (Online)</div>
+          <div class="label"><span class="info-heading">Hubs (Online) <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About Hubs online">?</button><span class="info-tip-popup" role="tooltip">Registered Tela hubs currently visible in this portal.</span></span></span></div>
           <div class="value" id="stat-hubs">- <span class="online-count">(-)</span></div>
-          <div class="meta">Registered Tela hubs currently visible in this portal.</div>
         </div>
         <div class="access-summary-card">
-          <div class="label">Machines (Online)</div>
+          <div class="label"><span class="info-heading">Machines (Online) <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About Machines online">?</button><span class="info-tip-popup" role="tooltip">Machines discovered across the visible hub fleet.</span></span></span></div>
           <div class="value" id="stat-machines">- <span class="online-count">(-)</span></div>
-          <div class="meta">Machines discovered across the visible hub fleet.</div>
         </div>
         <div class="access-summary-card">
-          <div class="label">Services (Active)</div>
+          <div class="label"><span class="info-heading">Services (Active) <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About Active services">?</button><span class="info-tip-popup" role="tooltip">Advertised services with active sessions shown in parentheses.</span></span></span></div>
           <div class="value" id="stat-services">- <span class="online-count">(-)</span></div>
-          <div class="meta">Advertised services with active sessions shown in parentheses.</div>
         </div>
       </div>
       <div class="section-stack">
@@ -73,37 +80,34 @@
         </div>
       </div>
       <p class="last-updated" id="last-updated"></p>
-    </div>
+        </div>
 
-    <div class="card hidden" id="access">
+        <div class="card hidden" id="access">
       <div class="card-head">
         <div class="card-head-copy">
           <h2><span class="info-heading">&#x1F512; Access Overview <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About Access Overview">?</button><span class="info-tip-popup" role="tooltip">Who can use the portal, what role they hold, and which Tela hubs they can reach.</span></span></span></h2>
         </div>
         <div class="card-actions">
+          <button class="panel-action-button hidden" id="access-refresh-btn" type="button">Refresh</button>
           <a class="page-link-chip hidden" id="dashboard-access-manage-link" href="/portal/access/">Manage Access</a>
         </div>
       </div>
       <div class="access-summary-grid">
         <div class="access-summary-card">
-          <div class="label">Users</div>
+          <div class="label"><span class="info-heading">Users <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About Users">?</button><span class="info-tip-popup" id="access-stat-users-meta" role="tooltip">Loading...</span></span></span></div>
           <div class="value" id="access-stat-users">-</div>
-          <div class="meta" id="access-stat-users-meta">Loading...</div>
         </div>
         <div class="access-summary-card">
-          <div class="label">Portal admins</div>
+          <div class="label"><span class="info-heading">Portal admins <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About Portal admins">?</button><span class="info-tip-popup" role="tooltip">Full visibility across all hubs.</span></span></span></div>
           <div class="value" id="access-stat-admins">-</div>
-          <div class="meta">Full visibility across all hubs</div>
         </div>
         <div class="access-summary-card">
-          <div class="label">Explicit memberships</div>
+          <div class="label"><span class="info-heading">Explicit memberships <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About Explicit memberships">?</button><span class="info-tip-popup" role="tooltip">Per-hub access grants and ownership.</span></span></span></div>
           <div class="value" id="access-stat-memberships">-</div>
-          <div class="meta">Per-hub access grants and ownership</div>
         </div>
         <div class="access-summary-card">
-          <div class="label">Registered hubs</div>
+          <div class="label"><span class="info-heading">Registered hubs <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About Registered hubs">?</button><span class="info-tip-popup" role="tooltip">Hubs available for assignment.</span></span></span></div>
           <div class="value" id="access-stat-registered-hubs">-</div>
-          <div class="meta">Hubs available for assignment</div>
         </div>
       </div>
       <div class="section-stack">
@@ -117,13 +121,22 @@
           <div class="table-wrap" id="memberships-content"><p class="no-data">Loading...</p></div>
         </div>
       </div>
-    </div>
+        </div>
 
-    <!-- Recent Activity (aggregated) -->
-    <div class="card" id="activity">
-      <h2><span class="info-heading">&#x1F4C8; Recent Activity <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About Recent Activity">?</button><span class="info-tip-popup" role="tooltip">Recent machine and session events across the visible hubs, ordered from newest to oldest.</span></span></span></h2>
+        <!-- Recent Activity (aggregated) -->
+        <div class="card" id="activity">
+      <div class="card-head">
+        <div class="card-head-copy">
+          <h2><span class="info-heading">&#x1F4C8; Recent Activity <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About Recent Activity">?</button><span class="info-tip-popup" role="tooltip">Recent machine and session events across the visible hubs, ordered from newest to oldest.</span></span></span></h2>
+        </div>
+        <div class="card-actions">
+          <button class="panel-action-button" id="activity-refresh-btn" type="button">Refresh</button>
+        </div>
+      </div>
       <div id="history-content">
         <p class="no-data">Loading...</p>
+      </div>
+        </div>
       </div>
     </div>
 
@@ -230,15 +243,13 @@
     function refreshAuthUI() {
       updateUserChrome();
       var accessNavLink = document.getElementById('access-nav-link');
-      var manageNavLink = document.getElementById('manage-nav-link');
-      var hubManageNavLink = document.getElementById('hub-manage-nav-link');
       var accessManageLink = document.getElementById('dashboard-access-manage-link');
+      var accessRefreshBtn = document.getElementById('access-refresh-btn');
       var hubsManageLink = document.getElementById('dashboard-hubs-manage-link');
       var method = AUTH_STATE.canManageHubs ? 'remove' : 'add';
       if (accessNavLink) accessNavLink.classList[method]('hidden');
-      if (manageNavLink) manageNavLink.classList[method]('hidden');
-      if (hubManageNavLink) hubManageNavLink.classList[method]('hidden');
       if (accessManageLink) accessManageLink.classList[method]('hidden');
+      if (accessRefreshBtn) accessRefreshBtn.classList[method]('hidden');
       if (hubsManageLink) hubsManageLink.classList[method]('hidden');
     }
 
@@ -337,6 +348,15 @@
     }
 
     function initDashboard() {
+    function setButtonState(ids, loading) {
+      ids.forEach(function (id) {
+        var btn = document.getElementById(id);
+        if (!btn) return;
+        btn.disabled = !!loading;
+        btn.textContent = loading ? 'Refreshing…' : 'Refresh';
+      });
+    }
+
     // ── Helpers ─────────────────────────────────────────────────────
     function timeAgo(isoStr) {
       if (!isoStr) return '\u2014';
@@ -491,7 +511,7 @@
           var meta = [];
           if (m.hostname) meta.push('<span>\uD83D\uDCBB ' + escHtml(m.hostname) + '</span>');
           if (m.os) meta.push('<span>' + escHtml(m.os) + '</span>');
-          if (m.agentVersion) meta.push('<span>v' + escHtml(m.agentVersion) + '</span>');
+          if (m.agentVersion) meta.push('<span>' + escHtml(m.agentVersion) + '</span>');
           var tags = (m.tags || []).map(function (t) { return '<span class="tag">' + escHtml(t) + '</span>'; }).join('');
           if (tags) meta.push(tags);
           if (meta.length > 0) name += '<div class="machine-meta">' + meta.join('') + '</div>';
@@ -541,16 +561,46 @@
       document.getElementById('last-updated').textContent = 'Last updated: ' + new Date().toLocaleTimeString();
     }
 
-    // ── Poll loop ───────────────────────────────────────────────────
-    function poll() {
-      fetchHubList().then(function () {
-        fetchAllHubs().then(render);
-      });
+    function refreshDashboardData() {
+      setButtonState(['operations-refresh-btn', 'activity-refresh-btn'], true);
+      return fetchHubList()
+        .then(function () {
+          return fetchAllHubs();
+        })
+        .then(function (results) {
+          render(results);
+        })
+        .catch(function () {
+          document.getElementById('history-content').innerHTML = '<p class="no-data">Refresh failed. Try again.</p>';
+        })
+        .then(function () {
+          setButtonState(['operations-refresh-btn', 'activity-refresh-btn'], false);
+        });
     }
 
-    poll();
-    setInterval(poll, 5000);
-  document.getElementById('logout-btn').addEventListener('click', handleLogout);
+    function refreshAccessCard() {
+      setButtonState(['access-refresh-btn'], true);
+      fetchAccessOverview()
+        .then(function () {
+          refreshAccessUI();
+        })
+        .catch(function () {
+          setStatusMessage('memberships-content', 'Failed to refresh access overview.', true);
+        })
+        .then(function () {
+          setButtonState(['access-refresh-btn'], false);
+        });
+    }
+
+    document.getElementById('operations-refresh-btn').addEventListener('click', refreshDashboardData);
+    document.getElementById('activity-refresh-btn').addEventListener('click', refreshDashboardData);
+    var accessRefreshBtn = document.getElementById('access-refresh-btn');
+    if (accessRefreshBtn) {
+      accessRefreshBtn.addEventListener('click', refreshAccessCard);
+    }
+
+    refreshDashboardData();
+    document.getElementById('logout-btn').addEventListener('click', handleLogout);
     } // end initDashboard
 
     boot();

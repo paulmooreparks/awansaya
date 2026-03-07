@@ -28,8 +28,7 @@
   <div class="container">
     <div class="page-head">
       <div class="page-head-copy">
-        <h1>Hub Management</h1>
-        <p class="page-desc">Register Tela hubs, review fleet status, and manage hub lifecycle actions in one place.</p>
+        <h1><span class="info-heading">Hub Management <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About Hub Management">?</button><span class="info-tip-popup" role="tooltip">Register Tela hubs, review fleet status, and manage hub lifecycle actions in one place.</span></span></span></h1>
       </div>
       <div class="page-actions">
         <a class="page-link-chip" href="/portal/">&larr; Back to dashboard</a>
@@ -39,33 +38,16 @@
     <div class="card" id="hub-management">
       <div class="card-head">
         <div class="card-head-copy">
-          <h2>&#x1F6E0;&#xFE0F; Hub Management</h2>
-          <p class="section-note">Register Tela hubs, remove old entries, and maintain the portal hub registry.</p>
+          <h2><span class="info-heading">&#x1F6E0;&#xFE0F; Hub Management <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About hub registry management">?</button><span class="info-tip-popup" role="tooltip">Register Tela hubs, remove old entries, and maintain the portal hub registry.</span></span></span></h2>
         </div>
-      </div>
-
-      <div class="access-summary-grid">
-        <div class="access-summary-card">
-          <div class="label">Hubs (Online)</div>
-          <div class="value" id="stat-hubs">- <span class="online-count">(-)</span></div>
-          <div class="meta">Registered hubs currently visible to this admin.</div>
-        </div>
-        <div class="access-summary-card">
-          <div class="label">Machines (Online)</div>
-          <div class="value" id="stat-machines">- <span class="online-count">(-)</span></div>
-          <div class="meta">Machines discovered across all registered hubs.</div>
-        </div>
-        <div class="access-summary-card">
-          <div class="label">Services (Active)</div>
-          <div class="value" id="stat-services">- <span class="online-count">(-)</span></div>
-          <div class="meta">Advertised services with active sessions shown in parentheses.</div>
+        <div class="card-actions">
+          <button class="panel-action-button" id="hub-management-refresh-btn" type="button">Refresh</button>
         </div>
       </div>
 
       <div class="section-stack">
         <div class="subcard">
-          <h3>Registered Hubs</h3>
-          <p class="subcard-intro">Add and remove hub registrations here while still seeing enough status to confirm what you are changing.</p>
+          <h3><span class="info-heading">Registered Hubs <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About Registered Hubs">?</button><span class="info-tip-popup" role="tooltip">Add and remove hub registrations here while still seeing enough status to confirm what you are changing.</span></span></span></h3>
           <div class="table-wrap" id="hubs-content"><p class="no-data">Loading...</p></div>
           <form class="add-hub-form" id="add-hub-form">
             <input name="name" placeholder="Hub name" required>
@@ -179,16 +161,11 @@
     }
 
     function render(results) {
-      var totalMachines = 0, totalOnline = 0, totalServices = 0, totalSessions = 0;
-
       if (results.length === 0) {
         document.getElementById('hubs-content').innerHTML =
           '<div class="empty-state"><div class="icon">&#x1F5A7;</div>'
           + '<p><strong>No hubs configured</strong></p>'
           + '<p>Add a Tela hub below to get started.</p></div>';
-        document.getElementById('stat-hubs').innerHTML = '0 <span class="online-count">(0)</span>';
-        document.getElementById('stat-machines').innerHTML = '0 <span class="online-count">(0)</span>';
-        document.getElementById('stat-services').innerHTML = '0 <span class="online-count">(0)</span>';
         document.getElementById('last-updated').textContent = 'Last updated: ' + new Date().toLocaleTimeString();
         return;
       }
@@ -201,12 +178,6 @@
         var machines = r.data.machines || [];
         var online = machines.filter(function (m) { return m.agentConnected; }).length;
         var sessions = machines.reduce(function (sum, m) { return sum + (m.sessionCount || 0); }, 0);
-        var svcs = machines.reduce(function (sum, m) { return sum + (m.services || []).length; }, 0);
-
-        totalMachines += machines.length;
-        totalOnline += online;
-        totalServices += svcs;
-        totalSessions += sessions;
 
         var dot = r.status === 'online'
           ? '<span class="dot green"></span> Online'
@@ -238,20 +209,26 @@
       hubsHtml += '</tbody></table>';
       document.getElementById('hubs-content').innerHTML = hubsHtml;
 
-      var hubsOnline = results.filter(function (r) { return r.status === 'online'; }).length;
-      document.getElementById('stat-hubs').innerHTML = results.length + ' <span class="online-count">(' + hubsOnline + ')</span>';
-      document.getElementById('stat-machines').innerHTML = totalMachines + ' <span class="online-count">(' + totalOnline + ')</span>';
-      document.getElementById('stat-services').innerHTML = totalServices + ' <span class="online-count">(' + totalSessions + ')</span>';
-
       document.getElementById('last-updated').textContent = 'Last updated: ' + new Date().toLocaleTimeString();
     }
 
-    function poll() {
-      fetchHubList().then(function () {
+    function setRefreshState(loading) {
+      var btn = document.getElementById('hub-management-refresh-btn');
+      if (!btn) return;
+      btn.disabled = !!loading;
+      btn.textContent = loading ? 'Refreshing…' : 'Refresh';
+    }
+
+    function refreshHubManagementData() {
+      setRefreshState(true);
+      return fetchHubList().then(function () {
         return fetchAllHubs();
       }).then(render)
         .catch(function () {
           setStatusMessage('hub-manage-msg', 'Failed to load hub management.', true);
+        })
+        .then(function () {
+          setRefreshState(false);
         });
     }
 
@@ -269,7 +246,7 @@
           if (!result.ok) throw new Error(result.data.error || 'Failed to remove hub');
           HUBS = result.data.hubs || HUBS;
           setStatusMessage('hub-manage-msg', 'Hub removed.');
-          poll();
+          refreshHubManagementData();
         })
         .catch(function (err) {
           setStatusMessage('hub-manage-msg', err.message, true);
@@ -307,13 +284,14 @@
           HUBS = result.data.hubs || HUBS;
           form.reset();
           setStatusMessage('hub-manage-msg', 'Hub added.');
-          poll();
+          refreshHubManagementData();
         })
         .catch(function (err) {
           setStatusMessage('hub-manage-msg', err.message, true);
         });
     });
 
+    document.getElementById('hub-management-refresh-btn').addEventListener('click', refreshHubManagementData);
     document.getElementById('logout-btn').addEventListener('click', handleLogout);
 
     function boot() {
@@ -328,10 +306,7 @@
             window.location.href = '/portal/';
             return Promise.reject(new Error('dashboard'));
           }
-          return poll();
-        })
-        .then(function () {
-          setInterval(poll, 5000);
+          return refreshHubManagementData();
         })
         .catch(function (err) {
           if (err && (err.message === 'signin' || err.message === 'dashboard')) return;

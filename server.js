@@ -942,6 +942,13 @@ async function serve(req, res) {
   const method  = req.method;
   const urlPath = decodeURIComponent(req.url.split('?')[0]);
 
+  if ((urlPath === '/dashboard' || urlPath === '/dashboard/') && (method === 'GET' || method === 'HEAD')) {
+    const user = await getSessionUser(req, true);
+    res.writeHead(302, { Location: user ? '/portal/' : '/sample-portal/' });
+    res.end();
+    return;
+  }
+
 	if (urlPath === '/portal' || urlPath.startsWith('/portal/')) {
 		const user = await requireAuthenticated(req, res, { redirect: true });
 		if (!user) return;

@@ -29,8 +29,7 @@
   <div class="container">
     <div class="page-head">
       <div class="page-head-copy">
-        <h1>Access Management</h1>
-        <p class="page-desc">Create users, assign portal roles, and manage per-hub visibility.</p>
+        <h1><span class="info-heading">Access Management <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About Access Management">?</button><span class="info-tip-popup" role="tooltip">Create users, assign portal roles, and manage per-hub visibility.</span></span></span></h1>
       </div>
       <div class="page-actions">
         <a class="page-link-chip" href="/portal/">&larr; Back to dashboard</a>
@@ -38,36 +37,11 @@
     </div>
 
     <div class="card" id="access-management">
-      <h2>&#x1F512; User and Hub Access</h2>
-      <p class="section-note">Administrative controls for portal accounts and explicit hub memberships.</p>
-
-      <div class="access-summary-grid">
-        <div class="access-summary-card">
-          <div class="label">Users</div>
-          <div class="value" id="access-stat-users">-</div>
-          <div class="meta" id="access-stat-users-meta">Loading...</div>
-        </div>
-        <div class="access-summary-card">
-          <div class="label">Portal admins</div>
-          <div class="value" id="access-stat-admins">-</div>
-          <div class="meta">Full visibility across all hubs</div>
-        </div>
-        <div class="access-summary-card">
-          <div class="label">Explicit memberships</div>
-          <div class="value" id="access-stat-memberships">-</div>
-          <div class="meta">Per-hub access grants and ownership</div>
-        </div>
-        <div class="access-summary-card">
-          <div class="label">Registered hubs</div>
-          <div class="value" id="access-stat-hubs">-</div>
-          <div class="meta">Hubs available for assignment</div>
-        </div>
-      </div>
+      <h2><span class="info-heading">&#x1F512; User and Hub Access <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About User and Hub Access">?</button><span class="info-tip-popup" role="tooltip">Administrative controls for portal accounts and explicit hub memberships.</span></span></span></h2>
 
       <div class="section-stack">
         <div class="subcard">
-          <h3>Create User</h3>
-          <p class="subcard-intro">Provision a new portal account and choose whether it has full administrative access.</p>
+          <h3><span class="info-heading">Create User <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About Create User">?</button><span class="info-tip-popup" role="tooltip">Provision a new portal account and choose whether it has full administrative access.</span></span></span></h3>
           <form class="admin-form stacked-form" id="create-user-form">
             <input name="displayName" placeholder="Display name" required>
             <input name="email" type="email" placeholder="user@example.com" autocomplete="email" required>
@@ -89,8 +63,7 @@
         </div>
 
         <div class="subcard">
-          <h3>Grant Hub Access</h3>
-          <p class="subcard-intro">Grant or update a non-admin user’s access to a specific Tela hub.</p>
+          <h3><span class="info-heading">Grant Hub Access <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About Grant Hub Access">?</button><span class="info-tip-popup" role="tooltip">Grant or update a non-admin user’s access to a specific Tela hub.</span></span></span></h3>
           <form class="admin-form stacked-form" id="grant-access-form">
             <select name="userId" title="User" aria-label="User" required></select>
             <select name="hubName" title="Hub" aria-label="Hub" required></select>
@@ -108,14 +81,12 @@
         </div>
 
         <div class="subcard">
-          <h3>User Directory</h3>
-          <p class="subcard-intro">Review all users, their portal role, and the hub visibility they currently hold.</p>
+          <h3><span class="info-heading">User Directory <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About User Directory">?</button><span class="info-tip-popup" role="tooltip">Review all users, their portal role, and the hub visibility they currently hold.</span></span></span></h3>
           <div class="table-wrap" id="users-content"><p class="no-data">Loading...</p></div>
         </div>
 
         <div class="subcard">
-          <h3>Memberships</h3>
-          <p class="subcard-intro">Review and revoke explicit per-hub memberships. Owners remain protected here.</p>
+          <h3><span class="info-heading">Memberships <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About Memberships">?</button><span class="info-tip-popup" role="tooltip">Review and revoke explicit per-hub memberships. Owners remain protected here.</span></span></span></h3>
           <div class="table-wrap" id="memberships-content"><p class="no-data">Loading...</p></div>
         </div>
       </div>
@@ -201,18 +172,11 @@
       var hubs = overview.hubs || [];
       var memberships = overview.memberships || [];
       var membershipsByUser = {};
-      var adminCount = users.filter(function (u) { return !!u.isAdmin; }).length;
 
       memberships.forEach(function (m) {
         if (!membershipsByUser[m.userId]) membershipsByUser[m.userId] = [];
         membershipsByUser[m.userId].push(m);
       });
-
-      document.getElementById('access-stat-users').textContent = String(users.length);
-      document.getElementById('access-stat-users-meta').textContent = users.length === 1 ? '1 portal account' : users.length + ' portal accounts';
-      document.getElementById('access-stat-admins').textContent = String(adminCount);
-      document.getElementById('access-stat-memberships').textContent = String(memberships.length);
-      document.getElementById('access-stat-hubs').textContent = String(hubs.length);
 
       var userSelect = document.querySelector('#grant-access-form select[name="userId"]');
       var hubSelect = document.querySelector('#grant-access-form select[name="hubName"]');

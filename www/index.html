@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Awan Saya — Connectivity Platform for Tela</title>
+  <title>Awan Saya Connectivity Platform for Tela</title>
   <link rel="stylesheet" href="/assets/styles/common.css">
   <link rel="stylesheet" href="/assets/styles/landing.css">
   <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
@@ -15,13 +15,10 @@
   <div class="topnav">
     <a href="/" class="logo"><em>Awan</em>Saya</a>
     <nav>
-      <a href="#features">Features</a>
-      <a href="#how-it-works">How It Works</a>
-      <a href="#download">Download</a>
+      <a href="/dashboard/" class="active">Dashboard</a>
     </nav>
     <div class="spacer"></div>
     <a id="signin-link" href="/sign-in/?next=%2Fportal%2F" class="signin-link">Sign In</a>
-    <a id="portal-cta-link" href="/sample-portal/" class="cta-nav">Sample Portal</a>
     <div id="user-area" class="user-area hidden">
       <span id="user-name">Guest</span>
       <div class="avatar" id="user-avatar">G</div>
@@ -37,224 +34,216 @@
       and encrypted tunnels across all your hubs from a single dashboard.
     </p>
     <div class="cta-row">
-      <a id="hero-portal-link" href="/sample-portal/" class="btn-primary">Sample Portal</a>
+      <a href="/dashboard/" class="btn-primary">Dashboard</a>
       <a href="#download" class="btn-secondary">Download Tela CLI</a>
     </div>
   </div>
 
-  <!-- Features -->
-  <div class="features" id="features">
-    <h2>Why Awan Saya?</h2>
-    <p class="features-sub">One platform. All your hubs. Every machine.</p>
-    <div class="feature-grid">
-      <div class="feature-card">
-        <div class="icon">&#x1F310;</div>
-        <h3>Multi-Hub Aggregation</h3>
-        <p>See every machine across every hub in one dashboard. No more switching between consoles.</p>
-      </div>
-      <div class="feature-card">
-        <div class="icon">&#x1F512;</div>
-        <h3>End-to-End Encrypted</h3>
-        <p>Tela tunnels use WireGuard encryption. The hub never sees your traffic &mdash; only metadata.</p>
-      </div>
-      <div class="feature-card">
-        <div class="icon">&#x26A1;</div>
-        <h3>Zero Config Networking</h3>
-        <p>STUN hole-punching with automatic relay fallback. Works through NAT, firewalls, and CGN.</p>
-      </div>
-      <div class="feature-card">
-        <div class="icon">&#x1F4BB;</div>
-        <h3>Cross-Platform CLI</h3>
-        <p>One binary for Windows, Linux, and macOS. Log in to your portal once, then use short hub names—no config files needed.</p>
-      </div>
-      <div class="feature-card">
-        <div class="icon">&#x1F3E2;</div>
-        <h3>Federation</h3>
-        <p>Any Tela hub can be registered with any portal. Hub owners keep full control of their infrastructure.</p>
-      </div>
-      <div class="feature-card">
-        <div class="icon">&#x1F464;</div>
-        <h3>User-Centric Access</h3>
-        <p>Users see machines, not infrastructure. Grant access without exposing hub topology.</p>
+  <div class="container">
+    <div class="page-layout">
+
+      <div class="page-main">
+        <!-- Features -->
+        <div class="features" id="features">
+            <h2>Why Awan Saya?</h2>
+            <p class="features-sub"></p>
+            <div class="feature-grid">
+            <div class="feature-card">
+                <div class="icon">&#x1F310;</div>
+                <h3>Multi-Hub Aggregation</h3>
+                <p>See every machine across every hub in one dashboard. No more switching between consoles.</p>
+            </div>
+            <div class="feature-card">
+                <div class="icon">&#x1F512;</div>
+                <h3>End-to-End Encrypted</h3>
+                <p>Tela tunnels use <a href="https://www.wireguard.com/">WireGuard</a> encryption. The hub never sees your traffic.</p>
+            </div>
+            <div class="feature-card">
+                <div class="icon">&#x26A1;</div>
+                <h3>Zero Config Networking</h3>
+                <p><a href="https://en.wikipedia.org/wiki/STUN">STUN</a> hole-punching with automatic relay fallback. Works through NAT, firewalls, and CGN.</p>
+            </div>
+            <div class="feature-card">
+                <div class="icon">&#x1F4BB;</div>
+                <h3>Cross-Platform CLI</h3>
+                <p>One binary for Windows, Linux, and macOS. Log in to your portal once, then use short hub names—no config files needed.</p>
+            </div>
+            <div class="feature-card">
+                <div class="icon">&#x1F3E2;</div>
+                <h3>Federation</h3>
+                <p>Any Tela hub can be registered with any portal. Hub owners keep full control of their infrastructure.</p>
+            </div>
+            <div class="feature-card">
+                <div class="icon">&#x1F464;</div>
+                <h3>User-Centric Access</h3>
+                <p>Users see machines, not infrastructure. Grant access without exposing hub topology.</p>
+            </div>
+            </div>
+        </div>
+
+        <!-- How it works -->
+        <div class="how-it-works" id="how-it-works">
+            <div class="container">
+            <h2>How It Works</h2>
+            <ol class="steps">
+                <li>
+                <div>
+                    <strong>Deploy a hub (relay) and register it</strong>
+                    <span class="desc"><a href="#download">Download <code>telahubd</code></a> and run it on a machine reachable by your agents and clients: a VPS, cloud VM, or an edge box on your network.
+                    A single command starts the hub:<br>
+                    <code class="code-inline">telahubd</code><br>
+                    By default it listens on port 8080 (HTTP+WS) and 41820 (UDP relay). Set <code>HUB_NAME</code> for the portal display name. Then add it to the <a href="/portal/">Awan Saya portal</a> with a short name and URL.</span>
+                </div>
+                </li>
+                <li>
+                <div>
+                    <strong>Install the agent on each machine</strong>
+                    <span class="desc"><a href="#download">Download <code>telad</code></a> and run it on every machine you want to access remotely. It connects to your hub and advertises the machine&rsquo;s services, such as SSH, RDP, HTTP, or any TCP port.</span>
+                </div>
+                </li>
+                <li>
+                <div>
+                    <strong>Connect from anywhere</strong>
+                    <span class="desc">On your workstation, log in to your portal once:<br><code class="code-inline">tela login https://awansaya.net</code><br>Then connect using short hub and machine names:<br><code class="code-inline">tela connect -hub &lt;hub-name&gt; -machine &lt;machine-name&gt;</code><br>The CLI resolves hub names via the portal, establishes an encrypted WireGuard tunnel, then automatically upgrades to a direct peer-to-peer connection when possible.</span>
+                </div>
+                </li>
+                <li>
+                <div>
+                    <strong>Manage from the portal</strong>
+                    <span class="desc">Open the <a href="/portal/">Awan Saya portal</a> to see all your hubs, machines, and active sessions in one place. Grant access to teammates without sharing credentials or exposing infrastructure.</span>
+                </div>
+                </li>
+            </ol>
+            <p class="center-callout">
+                <a href="https://github.com/paulmooreparks/tela#readme" class="btn-secondary small-link-cta">Read the full Getting Started guide &rarr;</a>
+            </p>
+            </div>
+        </div>
+
+        <!-- Architecture -->
+        <div class="architecture">
+            <h2>Architecture</h2>
+            <div class="mermaid-wrap">
+            <pre class="mermaid">
+        graph LR
+        subgraph Users
+            CLI["tela CLI<br/><small>connect</small>"]
+            Browser["Browser<br/><small>dashboard</small>"]
+        end
+
+        subgraph Infrastructure
+            Hub["Tela Hub<br/><small>relay + console</small>"]
+            Agent["telad<br/><small>agent</small>"]
+        end
+
+        subgraph Platform
+            Portal["Awan Saya<br/><small>portal + dashboard</small>"]
+        end
+
+        CLI -- "WireGuard tunnel" --> Hub
+        Agent -- "register + relay" --> Hub
+        Hub -- "API" --> Portal
+        Browser --> Portal
+
+        style CLI fill:#1a1a2e,stroke:#5ee89e,color:#fff
+        style Browser fill:#1a1a2e,stroke:#5ee89e,color:#fff
+        style Hub fill:#16213e,stroke:#5ee89e,color:#fff
+        style Agent fill:#16213e,stroke:#5ee89e,color:#fff
+        style Portal fill:#0f3460,stroke:#5ee89e,color:#fff
+            </pre>
+            </div>
+        </div>
+
+        <!-- Download (hidden until a GitHub Release exists) -->
+        <div class="download hidden-download" id="download">
+            <h2>Download Tela CLI</h2>
+            <p class="download-sub">Connect to machines through your hub. Single binary, no installer.</p>
+            <p class="release-banner" id="release-banner"></p>
+            <div class="download-grid">
+            <a class="dl-card" href="#" data-asset="tela-windows-amd64.exe">
+                <div class="dl-icon">&#x1F5A5;&#xFE0F;</div>
+                <div class="dl-label">Windows</div>
+                <div class="dl-binary">tela-windows-amd64.exe</div>
+            </a>
+            <a class="dl-card" href="#" data-asset="tela-linux-amd64">
+                <div class="dl-icon">&#x1F427;</div>
+                <div class="dl-label">Linux</div>
+                <div class="dl-binary">tela-linux-amd64</div>
+            </a>
+            <a class="dl-card" href="#" data-asset="tela-darwin-amd64">
+                <div class="dl-icon">&#x1F34E;</div>
+                <div class="dl-label">macOS (Intel)</div>
+                <div class="dl-binary">tela-darwin-amd64</div>
+            </a>
+            <a class="dl-card" href="#" data-asset="tela-darwin-arm64">
+                <div class="dl-icon">&#x1F34E;</div>
+                <div class="dl-label">macOS (Apple Silicon)</div>
+                <div class="dl-binary">tela-darwin-arm64</div>
+            </a>
+            </div>
+
+            <h2 class="section-gap-top">Download Telad Agent</h2>
+            <p class="download-sub">Install on each machine you want to access. Registers with your hub and advertises services.</p>
+            <div class="download-grid">
+            <a class="dl-card" href="#" data-asset="telad-windows-amd64.exe">
+                <div class="dl-icon">&#x1F5A5;&#xFE0F;</div>
+                <div class="dl-label">Windows</div>
+                <div class="dl-binary">telad-windows-amd64.exe</div>
+            </a>
+            <a class="dl-card" href="#" data-asset="telad-linux-amd64">
+                <div class="dl-icon">&#x1F427;</div>
+                <div class="dl-label">Linux</div>
+                <div class="dl-binary">telad-linux-amd64</div>
+            </a>
+            <a class="dl-card" href="#" data-asset="telad-darwin-amd64">
+                <div class="dl-icon">&#x1F34E;</div>
+                <div class="dl-label">macOS (Intel)</div>
+                <div class="dl-binary">telad-darwin-amd64</div>
+            </a>
+            <a class="dl-card" href="#" data-asset="telad-darwin-arm64">
+                <div class="dl-icon">&#x1F34E;</div>
+                <div class="dl-label">macOS (Apple Silicon)</div>
+                <div class="dl-binary">telad-darwin-arm64</div>
+            </a>
+            </div>
+
+            <h2 class="section-gap-top">Download Telahubd Hub Server</h2>
+            <p class="download-sub">Run your own hub. Single binary relay + console server.</p>
+            <div class="download-grid">
+            <a class="dl-card" href="#" data-asset="telahubd-windows-amd64.exe">
+                <div class="dl-icon">&#x1F5A5;&#xFE0F;</div>
+                <div class="dl-label">Windows</div>
+                <div class="dl-binary">telahubd-windows-amd64.exe</div>
+            </a>
+            <a class="dl-card" href="#" data-asset="telahubd-linux-amd64">
+                <div class="dl-icon">&#x1F427;</div>
+                <div class="dl-label">Linux</div>
+                <div class="dl-binary">telahubd-linux-amd64</div>
+            </a>
+            <a class="dl-card" href="#" data-asset="telahubd-darwin-amd64">
+                <div class="dl-icon">&#x1F34E;</div>
+                <div class="dl-label">macOS (Intel)</div>
+                <div class="dl-binary">telahubd-darwin-amd64</div>
+            </a>
+            <a class="dl-card" href="#" data-asset="telahubd-darwin-arm64">
+                <div class="dl-icon">&#x1F34E;</div>
+                <div class="dl-label">macOS (Apple Silicon)</div>
+                <div class="dl-binary">telahubd-darwin-arm64</div>
+            </a>
+            </div>
+            <p class="verify-note">Binaries are built by <a href="https://github.com/paulmooreparks/tela/actions">GitHub Actions</a> from <a href="https://github.com/paulmooreparks/tela">public source</a>. Verify with <code>sha256sum</code> or <code>Get-FileHash</code>.</p>
+        </div>
       </div>
     </div>
-  </div>
-
-  <!-- How it works -->
-  <div class="how-it-works" id="how-it-works">
-    <div class="container">
-      <h2>How It Works</h2>
-      <ol class="steps">
-        <li>
-          <div>
-            <strong>Deploy a hub (relay) and register it</strong>
-            <span class="desc"><a href="#download" class="accent-link">Download <code>telahubd</code></a> and run it on a machine reachable by your agents and clients&mdash;a VPS, cloud VM, or an edge box on your network.
-            A single command starts the hub:<br>
-            <code class="code-inline">telahubd</code><br>
-            By default it listens on port 8080 (HTTP+WS) and 41820 (UDP relay). Set <code>HUB_NAME</code> for the portal display name. Then add it to the <a href="/portal/" class="accent-link">Awan Saya portal</a> with a short name and URL.</span>
-          </div>
-        </li>
-        <li>
-          <div>
-            <strong>Install the agent on each machine</strong>
-            <span class="desc"><a href="#download" class="accent-link">Download <code>telad</code></a> and run it on every machine you want to access remotely. It connects to your hub and advertises the machine&rsquo;s services&mdash;SSH, RDP, HTTP, or any TCP port.</span>
-          </div>
-        </li>
-        <li>
-          <div>
-            <strong>Connect from anywhere</strong>
-            <span class="desc">On your workstation, log in to your portal once:<br><code class="code-inline">tela login https://awansaya.net</code><br>Then connect using short hub and machine names:<br><code class="code-inline">tela connect -hub &lt;hub-name&gt; -machine &lt;machine-name&gt;</code><br>The CLI resolves hub names via the portal, establishes an encrypted WireGuard tunnel, then automatically upgrades to a direct peer-to-peer connection when possible.</span>
-          </div>
-        </li>
-        <li>
-          <div>
-            <strong>Manage from the portal</strong>
-            <span class="desc">Open the <a href="/portal/" class="accent-link">Awan Saya portal</a> to see all your hubs, machines, and active sessions in one place. Grant access to teammates without sharing credentials or exposing infrastructure.</span>
-          </div>
-        </li>
-      </ol>
-      <p class="center-callout">
-        <a href="https://github.com/paulmooreparks/tela#readme" class="btn-secondary small-link-cta">Read the full Getting Started guide &rarr;</a>
-      </p>
-    </div>
-  </div>
-
-  <!-- Architecture -->
-  <div class="architecture">
-    <h2>Architecture</h2>
-    <div class="mermaid-wrap">
-      <pre class="mermaid">
-graph LR
-  subgraph Users
-    CLI["tela CLI<br/><small>connect</small>"]
-    Browser["Browser<br/><small>dashboard</small>"]
-  end
-
-  subgraph Infrastructure
-    Hub["Tela Hub<br/><small>relay + console</small>"]
-    Agent["telad<br/><small>agent</small>"]
-  end
-
-  subgraph Platform
-    Portal["Awan Saya<br/><small>portal + dashboard</small>"]
-  end
-
-  CLI -- "WireGuard tunnel" --> Hub
-  Agent -- "register + relay" --> Hub
-  Hub -- "API" --> Portal
-  Browser --> Portal
-
-  style CLI fill:#1a1a2e,stroke:#5ee89e,color:#fff
-  style Browser fill:#1a1a2e,stroke:#5ee89e,color:#fff
-  style Hub fill:#16213e,stroke:#5ee89e,color:#fff
-  style Agent fill:#16213e,stroke:#5ee89e,color:#fff
-  style Portal fill:#0f3460,stroke:#5ee89e,color:#fff
-      </pre>
-    </div>
-  </div>
-
-  <!-- Download (hidden until a GitHub Release exists) -->
-  <div class="download hidden-download" id="download">
-    <h2>Download Tela CLI</h2>
-    <p class="download-sub">Connect to machines through your hub. Single binary, no installer.</p>
-    <p class="release-banner" id="release-banner"></p>
-    <div class="download-grid">
-      <a class="dl-card" href="#" data-asset="tela-windows-amd64.exe">
-        <div class="dl-icon">&#x1F5A5;&#xFE0F;</div>
-        <div class="dl-label">Windows</div>
-        <div class="dl-binary">tela-windows-amd64.exe</div>
-      </a>
-      <a class="dl-card" href="#" data-asset="tela-linux-amd64">
-        <div class="dl-icon">&#x1F427;</div>
-        <div class="dl-label">Linux</div>
-        <div class="dl-binary">tela-linux-amd64</div>
-      </a>
-      <a class="dl-card" href="#" data-asset="tela-darwin-amd64">
-        <div class="dl-icon">&#x1F34E;</div>
-        <div class="dl-label">macOS (Intel)</div>
-        <div class="dl-binary">tela-darwin-amd64</div>
-      </a>
-      <a class="dl-card" href="#" data-asset="tela-darwin-arm64">
-        <div class="dl-icon">&#x1F34E;</div>
-        <div class="dl-label">macOS (Apple Silicon)</div>
-        <div class="dl-binary">tela-darwin-arm64</div>
-      </a>
-    </div>
-
-    <h2 class="section-gap-top">Download Telad Agent</h2>
-    <p class="download-sub">Install on each machine you want to access. Registers with your hub and advertises services.</p>
-    <div class="download-grid">
-      <a class="dl-card" href="#" data-asset="telad-windows-amd64.exe">
-        <div class="dl-icon">&#x1F5A5;&#xFE0F;</div>
-        <div class="dl-label">Windows</div>
-        <div class="dl-binary">telad-windows-amd64.exe</div>
-      </a>
-      <a class="dl-card" href="#" data-asset="telad-linux-amd64">
-        <div class="dl-icon">&#x1F427;</div>
-        <div class="dl-label">Linux</div>
-        <div class="dl-binary">telad-linux-amd64</div>
-      </a>
-      <a class="dl-card" href="#" data-asset="telad-darwin-amd64">
-        <div class="dl-icon">&#x1F34E;</div>
-        <div class="dl-label">macOS (Intel)</div>
-        <div class="dl-binary">telad-darwin-amd64</div>
-      </a>
-      <a class="dl-card" href="#" data-asset="telad-darwin-arm64">
-        <div class="dl-icon">&#x1F34E;</div>
-        <div class="dl-label">macOS (Apple Silicon)</div>
-        <div class="dl-binary">telad-darwin-arm64</div>
-      </a>
-    </div>
-
-    <h2 class="section-gap-top">Download Telahubd Hub Server</h2>
-    <p class="download-sub">Run your own hub. Single binary relay + console server.</p>
-    <div class="download-grid">
-      <a class="dl-card" href="#" data-asset="telahubd-windows-amd64.exe">
-        <div class="dl-icon">&#x1F5A5;&#xFE0F;</div>
-        <div class="dl-label">Windows</div>
-        <div class="dl-binary">telahubd-windows-amd64.exe</div>
-      </a>
-      <a class="dl-card" href="#" data-asset="telahubd-linux-amd64">
-        <div class="dl-icon">&#x1F427;</div>
-        <div class="dl-label">Linux</div>
-        <div class="dl-binary">telahubd-linux-amd64</div>
-      </a>
-      <a class="dl-card" href="#" data-asset="telahubd-darwin-amd64">
-        <div class="dl-icon">&#x1F34E;</div>
-        <div class="dl-label">macOS (Intel)</div>
-        <div class="dl-binary">telahubd-darwin-amd64</div>
-      </a>
-      <a class="dl-card" href="#" data-asset="telahubd-darwin-arm64">
-        <div class="dl-icon">&#x1F34E;</div>
-        <div class="dl-label">macOS (Apple Silicon)</div>
-        <div class="dl-binary">telahubd-darwin-arm64</div>
-      </a>
-    </div>
-    <p class="verify-note">Binaries are built by <a href="https://github.com/paulmooreparks/tela/actions">GitHub Actions</a> from <a href="https://github.com/paulmooreparks/tela">public source</a>. Verify with <code>sha256sum</code> or <code>Get-FileHash</code>.</p>
   </div>
 
   <script>
   // ── Landing page auth-aware chrome ─────────────────────────────
   (function () {
     var SIGN_IN_URL = '/sign-in/?next=%2Fportal%2F';
-    var SAMPLE_PORTAL_URL = '/sample-portal/';
-    var REAL_PORTAL_URL = '/portal/';
 
     function displayName(user) {
       return (user && (user.displayName || user.email)) || 'Guest';
-    }
-
-    function setPortalLinks(url, label) {
-      var cta = document.getElementById('portal-cta-link');
-      var hero = document.getElementById('hero-portal-link');
-      if (cta) {
-        cta.href = url;
-        cta.textContent = label;
-      }
-      if (hero) {
-        hero.href = url;
-        hero.textContent = label;
-      }
     }
 
     function setSignedInChrome(user) {
@@ -274,11 +263,6 @@ graph LR
       if (userAvatar) {
         userAvatar.textContent = displayName(user).charAt(0).toUpperCase();
       }
-      setPortalLinks(REAL_PORTAL_URL, 'Portal');
-      var cta = document.getElementById('portal-cta-link');
-      if (cta && user) {
-        cta.title = 'Signed in as ' + displayName(user);
-      }
     }
 
     function setSignedOutChrome() {
@@ -292,7 +276,6 @@ graph LR
       if (userArea) {
         userArea.classList.add('hidden');
       }
-      setPortalLinks(SAMPLE_PORTAL_URL, 'Sample Portal');
     }
 
     var logoutBtn = document.getElementById('logout-btn');
@@ -345,7 +328,7 @@ graph LR
           }
         });
 
-        if (!anyLinked) return; // no matching assets — keep section hidden
+        if (!anyLinked) return; // no matching assets; keep section hidden
 
         // Show the download section
         var downloadSection = document.getElementById('download');
@@ -381,7 +364,7 @@ graph LR
             });
         }
       })
-      .catch(function () { /* no release yet — section stays hidden */ });
+      .catch(function () { /* no release yet; section stays hidden */ });
   })();
   </script>
 
