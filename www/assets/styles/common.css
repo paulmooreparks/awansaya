@@ -139,6 +139,103 @@ a:hover {
   text-decoration-thickness: 2px;
 }
 
+/* ── User dropdown menu ── */
+.user-menu {
+  position: relative;
+}
+
+.user-menu-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 4px 10px 4px 4px;
+  cursor: pointer;
+  color: #ddd;
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1;
+  transition: border-color 0.15s;
+}
+
+.user-menu-trigger:hover,
+.user-menu-trigger:focus-visible {
+  border-color: #445;
+  color: #fff;
+}
+
+.user-menu-trigger .avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #5ee89e;
+  color: #1a1a2e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+
+.user-menu-trigger .chevron {
+  font-size: 0.7rem;
+  opacity: 0.7;
+  margin-left: 2px;
+}
+
+.user-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 180px;
+  background: #fff;
+  border: 1px solid #d8e0ea;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  z-index: 200;
+  overflow: hidden;
+  padding: 4px 0;
+}
+
+.user-dropdown.open {
+  display: block;
+}
+
+.topnav .user-dropdown a,
+.topnav .user-dropdown button {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: 10px 16px;
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 500;
+  line-height: 1.4;
+  color: #334155;
+  background: none;
+  border: none;
+  border-radius: 0;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.topnav .user-dropdown a:hover,
+.topnav .user-dropdown button:hover {
+  background: #f4f6f9;
+  color: #0b4692;
+}
+
+.topnav .user-dropdown a + button,
+.topnav .user-dropdown button + a {
+  border-top: 1px solid #eef1f5;
+}
+
 .password-field {
   position: relative;
   display: flex;

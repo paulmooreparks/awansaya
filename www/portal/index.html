@@ -13,13 +13,20 @@
     <a href="/" class="logo"><em>Awan</em>Saya</a>
     <nav>
       <a href="/portal/" class="active">Dashboard</a>
-      <a href="/portal/settings/">Settings</a>
     </nav>
     <div class="user-area">
-      <span id="user-name">Guest</span>
-      <div class="avatar" id="user-avatar">G</div>
       <a id="signin-link" href="/sign-in/?next=%2Fportal%2F">Sign In</a>
-      <button id="logout-btn" class="hidden" type="button">Sign out</button>
+      <div id="user-menu" class="user-menu hidden">
+        <button class="user-menu-trigger" id="user-menu-trigger" type="button">
+          <div class="avatar" id="user-avatar">G</div>
+          <span id="user-name">Guest</span>
+          <span class="chevron">&#x25BE;</span>
+        </button>
+        <div class="user-dropdown" id="user-dropdown">
+          <a href="/portal/settings/">Settings</a>
+          <button id="logout-btn" type="button">Sign out</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -95,19 +102,19 @@
       </div>
       <div class="access-summary-grid">
         <div class="access-summary-card">
-          <div class="label"><span class="info-heading">Users <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About Users">?</button><span class="info-tip-popup" id="access-stat-users-meta" role="tooltip">Loading...</span></span></span></div>
+          <div class="label"><span class="info-heading">Users <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About Users">?</button><span class="info-tip-popup" role="tooltip">Portal accounts with access to this instance.</span></span></span></div>
           <div class="value" id="access-stat-users">-</div>
         </div>
         <div class="access-summary-card">
-          <div class="label"><span class="info-heading">Portal admins <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About Portal admins">?</button><span class="info-tip-popup" role="tooltip">Full visibility across all hubs.</span></span></span></div>
+          <div class="label"><span class="info-heading">Admins <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About Admins">?</button><span class="info-tip-popup" role="tooltip">Portal admins with full visibility across all hubs.</span></span></span></div>
           <div class="value" id="access-stat-admins">-</div>
         </div>
         <div class="access-summary-card">
-          <div class="label"><span class="info-heading">Explicit memberships <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About Explicit memberships">?</button><span class="info-tip-popup" role="tooltip">Per-hub access grants and ownership.</span></span></span></div>
+          <div class="label"><span class="info-heading">Memberships <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About Memberships">?</button><span class="info-tip-popup" role="tooltip">Explicit per-hub access grants and ownership.</span></span></span></div>
           <div class="value" id="access-stat-memberships">-</div>
         </div>
         <div class="access-summary-card">
-          <div class="label"><span class="info-heading">Registered hubs <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About Registered hubs">?</button><span class="info-tip-popup" role="tooltip">Hubs available for assignment.</span></span></span></div>
+          <div class="label"><span class="info-heading">Hubs <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About Hubs">?</button><span class="info-tip-popup" role="tooltip">Registered hubs available for assignment.</span></span></span></div>
           <div class="value" id="access-stat-registered-hubs">-</div>
         </div>
       </div>
@@ -225,18 +232,18 @@
     function updateUserChrome() {
       var nameEl = document.getElementById('user-name');
       var avatarEl = document.getElementById('user-avatar');
-      var logoutBtn = document.getElementById('logout-btn');
+      var userMenu = document.getElementById('user-menu');
       var signinLink = document.getElementById('signin-link');
       if (AUTH_STATE.user) {
         var name = AUTH_STATE.user.displayName || AUTH_STATE.user.email;
         nameEl.textContent = name;
         avatarEl.textContent = String(name).charAt(0).toUpperCase();
-        logoutBtn.classList.remove('hidden');
+        userMenu.classList.remove('hidden');
         signinLink.classList.add('hidden');
       } else {
         nameEl.textContent = AUTH_STATE.authEnabled ? 'Signed out' : 'Guest';
         avatarEl.textContent = AUTH_STATE.authEnabled ? '?' : 'G';
-        logoutBtn.classList.add('hidden');
+        userMenu.classList.add('hidden');
         signinLink.classList.remove('hidden');
       }
     }
@@ -283,7 +290,6 @@
       });
 
       document.getElementById('access-stat-users').textContent = String(users.length);
-      document.getElementById('access-stat-users-meta').textContent = users.length === 1 ? '1 portal account' : users.length + ' portal accounts';
       document.getElementById('access-stat-admins').textContent = String(adminCount);
       document.getElementById('access-stat-memberships').textContent = String(memberships.length);
       document.getElementById('access-stat-registered-hubs').textContent = String(hubs.length);
@@ -359,15 +365,16 @@
     }
 
     // ── Helpers ─────────────────────────────────────────────────────
-    function timeAgo(isoStr) {
+    function isoTime(isoStr) {
       if (!isoStr) return '\u2014';
-      var diff = (Date.now() - new Date(isoStr).getTime()) / 1000;
-      if (diff < 0) diff = 0;
-      if (diff < 5)    return 'just now';
-      if (diff < 60)   return Math.floor(diff) + 's ago';
-      if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
-      if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
-      return Math.floor(diff / 86400) + 'd ago';
+      var d = new Date(isoStr);
+      if (isNaN(d.getTime())) return '\u2014';
+      return d.getFullYear()
+        + '-' + String(d.getMonth() + 1).padStart(2, '0')
+        + '-' + String(d.getDate()).padStart(2, '0')
+        + ' ' + String(d.getHours()).padStart(2, '0')
+        + ':' + String(d.getMinutes()).padStart(2, '0')
+        + ':' + String(d.getSeconds()).padStart(2, '0');
     }
 
     var EVENT_LABELS = {
@@ -522,7 +529,7 @@
             + '<td>' + escHtml(item.hubName) + '</td>'
             + '<td>' + statusDot + '</td>'
             + '<td>' + svcs + '</td>'
-            + '<td>' + timeAgo(m.lastSeen) + '</td>'
+            + '<td>' + isoTime(m.lastSeen) + '</td>'
             + '</tr>';
         });
 
@@ -549,7 +556,7 @@
           var label = EVENT_LABELS[ev.event] || ev.event;
           var detail = formatEventDetail(ev);
           hHtml += '<li>'
-            + '<span class="history-time">' + timeAgo(ev.timestamp) + '</span>'
+            + '<span class="history-time">' + isoTime(ev.timestamp) + '</span>'
             + '<span class="history-hub">' + escHtml(ev._hub) + '</span>'
             + '<span class="history-machine">' + escHtml(ev.machineId) + '</span>'
             + '<span class="history-event">' + label + (detail ? ' <span class="history-detail">(' + escHtml(detail) + ')</span>' : '') + '</span>'
@@ -602,6 +609,22 @@
 
     refreshDashboardData();
     document.getElementById('logout-btn').addEventListener('click', handleLogout);
+
+    // User menu dropdown toggle
+    (function() {
+      var trigger = document.getElementById('user-menu-trigger');
+      var dropdown = document.getElementById('user-dropdown');
+      if (trigger && dropdown) {
+        trigger.addEventListener('click', function(e) {
+          e.stopPropagation();
+          dropdown.classList.toggle('open');
+        });
+        document.addEventListener('click', function() {
+          dropdown.classList.remove('open');
+        });
+      }
+    })();
+
     } // end initDashboard
 
     boot();

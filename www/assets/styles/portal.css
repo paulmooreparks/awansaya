@@ -644,7 +644,7 @@ h1 {
   border-radius: 6px;
   font-size: 0.92rem;
   font-family: inherit;
-  min-width: 2rem;
+  min-width: 4rem;
   width: 100%;
 }
 
@@ -766,6 +766,62 @@ h1 {
   color: #666;
 }
 
+/* ── Inline form (settings generate token) ─────────────────── */
+.inline-form {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.inline-form input {
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.92rem;
+  font-family: inherit;
+  min-width: 200px;
+  flex: 1;
+  max-width: 320px;
+}
+
+.inline-form button {
+  background: #1a1a2e;
+  color: #fff;
+  border: none;
+  padding: 9px 16px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 0.92rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.inline-form button:hover {
+  background: #333;
+}
+
+/* ── Token table ───────────────────────────────────────────── */
+.admin-table.token-table {
+  table-layout: auto;
+}
+
+.admin-table.token-table th,
+.admin-table.token-table td {
+  white-space: nowrap;
+}
+
+.admin-table.token-table th:nth-child(1),
+.admin-table.token-table td:nth-child(1) {
+  width: auto;
+}
+
+.admin-table.token-table th:nth-child(5),
+.admin-table.token-table td:nth-child(5) {
+  width: 1%;
+  text-align: right;
+}
+
 /* ── Token reveal (settings page) ──────────────────────────── */
 .token-reveal {
   margin-top: 14px;
@@ -798,18 +854,50 @@ h1 {
   user-select: all;
 }
 
+.code-block-wrap {
+  position: relative;
+  margin: 10px 0;
+}
+
 .code-block {
   background: #1e1e2e;
   color: #cdd6f4;
-  padding: 12px 16px;
+  padding: 14px 80px 14px 18px;
   border-radius: 6px;
   overflow-x: auto;
   font-size: 0.85rem;
   line-height: 1.5;
+  margin: 0;
 }
 
 .code-block code {
   font-family: 'Courier New', Courier, monospace;
+}
+
+.code-copy-btn {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.1);
+  color: #cdd6f4;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+
+.code-copy-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.code-copy-btn.copied {
+  color: #5ee89e;
+  border-color: #5ee89e;
 }
 
 .history-list {

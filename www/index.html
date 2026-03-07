@@ -20,9 +20,17 @@
     <div class="spacer"></div>
     <a id="signin-link" href="/sign-in/?next=%2Fportal%2F" class="signin-link">Sign In</a>
     <div id="user-area" class="user-area hidden">
-      <span id="user-name">Guest</span>
-      <div class="avatar" id="user-avatar">G</div>
-      <button id="logout-btn" type="button">Sign out</button>
+      <div id="user-menu" class="user-menu">
+        <button class="user-menu-trigger" id="user-menu-trigger" type="button">
+          <div class="avatar" id="user-avatar">G</div>
+          <span id="user-name">Guest</span>
+          <span class="chevron">&#x25BE;</span>
+        </button>
+        <div class="user-dropdown" id="user-dropdown">
+          <a href="/portal/settings/">Settings</a>
+          <button id="logout-btn" type="button">Sign out</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -287,6 +295,21 @@
           });
       });
     }
+
+    // User menu dropdown toggle
+    (function() {
+      var trigger = document.getElementById('user-menu-trigger');
+      var dropdown = document.getElementById('user-dropdown');
+      if (trigger && dropdown) {
+        trigger.addEventListener('click', function(e) {
+          e.stopPropagation();
+          dropdown.classList.toggle('open');
+        });
+        document.addEventListener('click', function() {
+          dropdown.classList.remove('open');
+        });
+      }
+    })();
 
     setSignedOutChrome();
 

@@ -12,26 +12,42 @@
     <a href="/" class="logo"><em>Awan</em>Saya</a>
     <nav>
       <a href="/portal/">Dashboard</a>
-      <a href="/portal/#operations">Hubs &amp; Machines</a>
-      <a href="/portal/settings/" class="active">Settings</a>
     </nav>
     <div class="user-area">
-      <span id="user-name">Guest</span>
-      <div class="avatar" id="user-avatar">G</div>
       <a id="signin-link" href="/sign-in/?next=%2Fportal%2Fsettings%2F">Sign In</a>
-      <button id="logout-btn" class="hidden" type="button">Sign out</button>
+      <div id="user-menu" class="user-menu hidden">
+        <button class="user-menu-trigger" id="user-menu-trigger" type="button">
+          <div class="avatar" id="user-avatar">G</div>
+          <span id="user-name">Guest</span>
+          <span class="chevron">&#x25BE;</span>
+        </button>
+        <div class="user-dropdown" id="user-dropdown">
+          <a href="/portal/settings/" class="active">Settings</a>
+          <button id="logout-btn" type="button">Sign out</button>
+        </div>
+      </div>
     </div>
   </div>
 
   <div class="container">
-    <div class="page-head">
-      <div class="page-head-copy">
-        <h1><span class="info-heading">Settings <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About Settings">?</button><span class="info-tip-popup" role="tooltip">Manage your personal API tokens for Tela CLI access.</span></span></span></h1>
-      </div>
-      <div class="page-actions">
-        <a class="page-link-chip" href="/portal/">&larr; Back to dashboard</a>
-      </div>
-    </div>
+    <div class="page-layout">
+      <aside class="side-nav" aria-label="Section navigation">
+        <div class="side-nav-panel">
+          <div class="side-nav-title">On this page</div>
+          <nav class="side-nav-links">
+            <a href="/portal/settings/">Top</a>
+            <a href="/portal/settings/#api-tokens">Personal API Tokens</a>
+            <a href="/portal/settings/#cli-usage">CLI Usage</a>
+          </nav>
+        </div>
+      </aside>
+
+      <div class="page-main">
+        <div class="page-head">
+          <div class="page-head-copy">
+            <h1><span class="info-heading">Settings <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About Settings">?</button><span class="info-tip-popup" role="tooltip">Manage your personal API tokens for Tela CLI access.</span></span></span></h1>
+          </div>
+        </div>
 
     <div class="card" id="api-tokens">
       <div class="card-head">
@@ -46,11 +62,9 @@
       <div class="section-stack">
         <div class="subcard">
           <h3><span class="info-heading">Generate Token <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About generating tokens">?</button><span class="info-tip-popup" role="tooltip">Give the token a descriptive name (e.g. "laptop", "workstation"). The token value is shown only once — copy it immediately.</span></span></span></h3>
-          <form class="admin-form stacked-form" id="create-token-form">
+          <form class="inline-form" id="create-token-form">
             <input name="name" placeholder="Token name (e.g. laptop)" required maxlength="128">
-            <div class="full-span">
-              <button type="submit">Generate Token</button>
-            </div>
+            <button type="submit">Generate Token</button>
           </form>
           <div class="status-msg" id="create-token-msg"></div>
           <div class="token-reveal hidden" id="token-reveal">
@@ -73,10 +87,18 @@
       <h2><span class="info-heading">&#x1F4BB; CLI Usage <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About CLI Usage">?</button><span class="info-tip-popup" role="tooltip">Quick reference for connecting the Tela CLI to this portal.</span></span></span></h2>
       <div class="subcard">
         <p>After generating a token above, register this portal as a remote in the Tela CLI:</p>
-        <pre class="code-block"><code>tela remote add awansaya <span id="portal-url">https://awansaya.net</span></code></pre>
+        <div class="code-block-wrap">
+          <pre class="code-block"><code>tela remote add awansaya <span id="portal-url">https://awansaya.net</span></code></pre>
+          <button class="code-copy-btn" type="button" title="Copy to clipboard">&#x1F4CB; Copy</button>
+        </div>
         <p>When prompted for a token, paste the value you copied above. The CLI will verify the connection and store the token securely.</p>
         <p>To check your configured remotes:</p>
-        <pre class="code-block"><code>tela remote list</code></pre>
+        <div class="code-block-wrap">
+          <pre class="code-block"><code>tela remote list</code></pre>
+          <button class="code-copy-btn" type="button" title="Copy to clipboard">&#x1F4CB; Copy</button>
+        </div>
+      </div>
+    </div>
       </div>
     </div>
   </div>
@@ -131,18 +153,18 @@
     function updateUserChrome() {
       var nameEl = document.getElementById('user-name');
       var avatarEl = document.getElementById('user-avatar');
-      var logoutBtn = document.getElementById('logout-btn');
+      var userMenu = document.getElementById('user-menu');
       var signinLink = document.getElementById('signin-link');
       if (AUTH_STATE.user) {
         var name = AUTH_STATE.user.displayName || AUTH_STATE.user.email;
         nameEl.textContent = name;
         avatarEl.textContent = String(name).charAt(0).toUpperCase();
-        logoutBtn.classList.remove('hidden');
+        userMenu.classList.remove('hidden');
         signinLink.classList.add('hidden');
       } else {
         nameEl.textContent = AUTH_STATE.authEnabled ? 'Signed out' : 'Guest';
         avatarEl.textContent = AUTH_STATE.authEnabled ? '?' : 'G';
-        logoutBtn.classList.add('hidden');
+        userMenu.classList.add('hidden');
         signinLink.classList.remove('hidden');
       }
     }
@@ -167,7 +189,7 @@
         return;
       }
 
-      var html = '<table class="admin-table has-actions"><thead><tr>'
+      var html = '<table class="admin-table token-table"><thead><tr>'
         + '<th>Name</th><th>Prefix</th><th>Created</th><th>Last Used</th><th></th>'
         + '</tr></thead><tbody>';
 
@@ -290,6 +312,21 @@
     document.getElementById('tokens-refresh-btn').addEventListener('click', refreshTokens);
     document.getElementById('logout-btn').addEventListener('click', handleLogout);
 
+    // User menu dropdown toggle
+    (function() {
+      var trigger = document.getElementById('user-menu-trigger');
+      var dropdown = document.getElementById('user-dropdown');
+      if (trigger && dropdown) {
+        trigger.addEventListener('click', function(e) {
+          e.stopPropagation();
+          dropdown.classList.toggle('open');
+        });
+        document.addEventListener('click', function() {
+          dropdown.classList.remove('open');
+        });
+      }
+    })();
+
     function boot() {
       // Set portal URL hint from current location
       var portalUrlEl = document.getElementById('portal-url');
@@ -313,6 +350,23 @@
     }
 
     boot();
+
+    // Code block copy buttons
+    document.querySelectorAll('.code-copy-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var code = btn.closest('.code-block-wrap').querySelector('code');
+        if (!code) return;
+        var text = code.textContent;
+        navigator.clipboard.writeText(text).then(function() {
+          btn.textContent = '\u2714 Copied';
+          btn.classList.add('copied');
+          setTimeout(function() {
+            btn.innerHTML = '&#x1F4CB; Copy';
+            btn.classList.remove('copied');
+          }, 2000);
+        });
+      });
+    });
   </script>
 </body>
 </html>
