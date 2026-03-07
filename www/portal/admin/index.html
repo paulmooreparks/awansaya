@@ -192,7 +192,7 @@
       var currentEmail = AUTH_STATE.user ? AUTH_STATE.user.email : '';
 
       var html = '<table class="admin-table has-actions"><thead>'
-        + '<tr><th>User</th><th>Role</th><th>Created</th><th>Actions</th></tr>'
+        + '<tr><th>User</th><th>Role</th><th>Created</th><th></th></tr>'
         + '</thead><tbody>';
 
       users.forEach(function (u) {
@@ -201,24 +201,28 @@
           ? '<span class="pill admin">Portal admin</span>'
           : '<span class="pill">Standard user</span>';
 
-        // Action buttons
-        var actions = '';
+        var safeName = JSON.stringify(escHtml(u.displayName || u.email));
 
-        // Toggle admin
+        // Primary action: Reset Code
+        var primary = '<button class="btn-action" type="button" onclick=\'promptResetPassword(' + Number(u.id) + ', ' + safeName + ')\' title="Generate a password reset code">Reset Code</button>';
+
+        // Overflow menu items (only for non-self)
+        var overflowItems = '';
         if (!isSelf) {
           if (u.isAdmin) {
-            actions += '<button class="btn-action" type="button" onclick=\'toggleAdmin(' + Number(u.id) + ', false)\' title="Demote to standard user">Demote</button>';
+            overflowItems += '<button type="button" onclick=\'toggleAdmin(' + Number(u.id) + ', false)\'>Demote to user</button>';
           } else {
-            actions += '<button class="btn-action" type="button" onclick=\'toggleAdmin(' + Number(u.id) + ', true)\' title="Promote to portal admin">Promote</button>';
+            overflowItems += '<button type="button" onclick=\'toggleAdmin(' + Number(u.id) + ', true)\'>Promote to admin</button>';
           }
+          overflowItems += '<button type="button" class="danger" onclick=\'deleteUser(' + Number(u.id) + ', ' + safeName + ')\'>Delete account</button>';
         }
 
-        // Reset password
-        actions += '<button class="btn-action" type="button" onclick=\'promptResetPassword(' + Number(u.id) + ', ' + JSON.stringify(escHtml(u.displayName || u.email)) + ')\' title="Generate a password reset code">Reset Code</button>';
-
-        // Delete (not self)
-        if (!isSelf) {
-          actions += '<button class="btn-remove" type="button" onclick=\'deleteUser(' + Number(u.id) + ', ' + JSON.stringify(escHtml(u.displayName || u.email)) + ')\' title="Delete this account">Delete</button>';
+        var overflow = '';
+        if (overflowItems) {
+          overflow = '<div class="action-overflow">'
+            + '<button class="action-overflow-trigger" type="button" aria-label="More actions" onclick="toggleOverflow(event)">\u22EF</button>'
+            + '<div class="action-overflow-menu">' + overflowItems + '</div>'
+            + '</div>';
         }
 
         html += '<tr>'
@@ -226,7 +230,7 @@
           + (isSelf ? ' <span class="pill" style="font-size:0.7em;vertical-align:middle">you</span>' : '') + '</td>'
           + '<td>' + rolePill + '</td>'
           + '<td>' + isoTime(u.createdAt) + '</td>'
-          + '<td class="action-cell">' + actions + '</td>'
+          + '<td class="action-cell"><div class="row-actions">' + primary + overflow + '</div></td>'
           + '</tr>';
       });
 
@@ -377,6 +381,23 @@
         });
       }
     })();
+
+    // ── Overflow menu toggle ────────────────────────────────
+    window.toggleOverflow = function (e) {
+      e.stopPropagation();
+      var menu = e.currentTarget.nextElementSibling;
+      var wasOpen = menu.classList.contains('open');
+      closeAllOverflows();
+      if (!wasOpen) menu.classList.add('open');
+    };
+
+    function closeAllOverflows() {
+      document.querySelectorAll('.action-overflow-menu.open').forEach(function (m) {
+        m.classList.remove('open');
+      });
+    }
+
+    document.addEventListener('click', closeAllOverflows);
 
     // Copy setup code button
     document.getElementById('copy-setup-code-btn').addEventListener('click', function () {
