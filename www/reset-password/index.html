@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reset Password — Awan Saya</title>
+  <link rel="stylesheet" href="/assets/styles/common.css">
+  <link rel="stylesheet" href="/assets/styles/sign-in.css">
+  <script src="/assets/scripts/password-toggle.js" defer></script>
+</head>
+<body>
+  <div class="topnav">
+    <a href="/" class="logo"><em>Awan</em>Saya</a>
+    <div class="spacer"></div>
+    <a href="/sign-in/" class="nav-link">Sign In</a>
+  </div>
+
+  <div class="shell">
+    <div class="card">
+      <!-- Step 1: Request code -->
+      <div id="request-step">
+        <h1>Reset Password</h1>
+        <p class="sub">Enter your email and the 6-digit code you received from an administrator.</p>
+        <form id="reset-form">
+          <input name="email" type="email" placeholder="Email" autocomplete="username" required>
+          <input name="code" type="text" placeholder="6-digit code" autocomplete="one-time-code" required maxlength="6" pattern="\d{6}" inputmode="numeric">
+          <div class="password-field">
+            <input id="reset-password" name="password" type="password" placeholder="New password (min 8 characters)" autocomplete="new-password" required minlength="8">
+            <button class="password-toggle" type="button" data-password-toggle aria-controls="reset-password" aria-pressed="false">Show</button>
+          </div>
+          <div class="password-field">
+            <input id="reset-confirm" name="confirmPassword" type="password" placeholder="Confirm new password" autocomplete="new-password" required minlength="8">
+            <button class="password-toggle" type="button" data-password-toggle aria-controls="reset-confirm" aria-pressed="false">Show</button>
+          </div>
+          <button type="submit">Set Password</button>
+        </form>
+        <div id="reset-msg" class="msg hidden"></div>
+      </div>
+
+      <!-- Success view -->
+      <div id="success-view" class="hidden">
+        <h1>Password Updated</h1>
+        <p class="sub">Your password has been changed. You can now sign in.</p>
+        <div class="actions">
+          <button id="signin-btn" type="button">Go to Sign In</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function setMsg(id, text, cls) {
+      var el = document.getElementById(id);
+      el.className = 'msg ' + cls;
+      el.textContent = text;
+      el.classList.remove('hidden');
+    }
+
+    document.getElementById('reset-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var email = this.elements.email.value.trim().toLowerCase();
+      var code = this.elements.code.value.trim();
+      var password = this.elements.password.value;
+      var confirm = this.elements.confirmPassword.value;
+
+      if (password !== confirm) {
+        setMsg('reset-msg', 'Passwords do not match.', 'error');
+        return;
+      }
+
+      var btn = this.querySelector('button[type="submit"]');
+      btn.disabled = true;
+      btn.textContent = 'Setting…';
+
+      fetch('/api/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email, code: code, password: password })
+      })
+        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+        .then(function (result) {
+          if (!result.ok) throw new Error(result.data.error || 'Reset failed');
+          document.getElementById('request-step').classList.add('hidden');
+          document.getElementById('success-view').classList.remove('hidden');
+        })
+        .catch(function (err) {
+          btn.disabled = false;
+          btn.textContent = 'Set Password';
+          setMsg('reset-msg', err.message, 'error');
+        });
+    });
+
+    document.getElementById('signin-btn').addEventListener('click', function () {
+      window.location.href = '/sign-in/';
+    });
+  </script>
+</body>
+</html>

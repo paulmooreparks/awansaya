@@ -6,13 +6,13 @@
   <title>Access Management — Awan Saya</title>
   <link rel="stylesheet" href="/assets/styles/common.css">
   <link rel="stylesheet" href="/assets/styles/portal.css">
-  <script src="/assets/scripts/password-toggle.js" defer></script>
 </head>
 <body>
   <div class="topnav">
     <a href="/" class="logo"><em>Awan</em>Saya</a>
     <nav>
       <a href="/portal/">Dashboard</a>
+      <a id="admin-link" href="/portal/admin/" class="hidden">Admin</a>
     </nav>
     <div class="user-area">
       <a id="signin-link" href="/sign-in/?next=%2Fportal%2Faccess%2F">Sign In</a>
@@ -37,7 +37,6 @@
           <div class="side-nav-title">On this page</div>
           <nav class="side-nav-links">
             <a href="/portal/access/">Top</a>
-            <a href="/portal/access/#create-user">Create User</a>
             <a href="/portal/access/#grant-access">Grant Hub Access</a>
             <a href="/portal/access/#user-directory">User Directory</a>
             <a href="/portal/access/#memberships">Memberships</a>
@@ -48,7 +47,7 @@
       <div class="page-main">
         <div class="page-head">
           <div class="page-head-copy">
-            <h1><span class="info-heading">Access Management <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About Access Management">?</button><span class="info-tip-popup" role="tooltip">Create users, assign portal roles, and manage per-hub visibility.</span></span></span></h1>
+            <h1><span class="info-heading">Access Management <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About Access Management">?</button><span class="info-tip-popup" role="tooltip">Assign portal roles and manage per-hub visibility. Use the Admin page to invite new users.</span></span></span></h1>
           </div>
           <div class="page-actions">
             <a class="page-link-chip" href="/portal/">&larr; Back to dashboard</a>
@@ -59,28 +58,6 @@
       <h2><span class="info-heading">&#x1F512; User and Hub Access <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About User and Hub Access">?</button><span class="info-tip-popup" role="tooltip">Administrative controls for portal accounts and explicit hub memberships.</span></span></span></h2>
 
       <div class="section-stack">
-        <div class="subcard" id="create-user">
-          <h3><span class="info-heading">Create User <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About Create User">?</button><span class="info-tip-popup" role="tooltip">Provision a new portal account and choose whether it has full administrative access.</span></span></span></h3>
-          <form class="admin-form stacked-form" id="create-user-form">
-            <input name="displayName" placeholder="Display name" required>
-            <input name="email" type="email" placeholder="user@example.com" autocomplete="email" required>
-            <div class="password-field full-span">
-              <input id="create-user-password" name="password" type="password" placeholder="Temporary password" autocomplete="new-password" required>
-              <button class="password-toggle" type="button" data-password-toggle aria-controls="create-user-password" aria-pressed="false">Show</button>
-            </div>
-            <label>Portal role
-              <select name="portalRole">
-                <option value="user" selected>Standard user</option>
-                <option value="admin">Portal admin</option>
-              </select>
-            </label>
-            <div class="full-span">
-              <button type="submit">Create User</button>
-            </div>
-          </form>
-          <div class="status-msg" id="create-user-msg"></div>
-        </div>
-
         <div class="subcard" id="grant-access">
           <h3><span class="info-heading">Grant Hub Access <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About Grant Hub Access">?</button><span class="info-tip-popup" role="tooltip">Grant or update a non-admin user’s access to a specific Tela hub.</span></span></span></h3>
           <form class="admin-form stacked-form" id="grant-access-form">
@@ -274,6 +251,10 @@
       fetchAuthMode()
         .then(function () {
           updateUserChrome();
+          if (AUTH_STATE.canManageHubs) {
+            var al = document.getElementById('admin-link');
+            if (al) al.classList.remove('hidden');
+          }
           if (!AUTH_STATE.authenticated) {
             window.location.href = '/sign-in/?next=%2Fportal%2Faccess%2F';
             return Promise.reject(new Error('signin'));
@@ -299,36 +280,6 @@
           window.location.href = '/';
         });
     }
-
-    document.getElementById('create-user-form').addEventListener('submit', function (e) {
-      e.preventDefault();
-      var payload = {
-        displayName: this.elements.displayName.value.trim(),
-        email: this.elements.email.value.trim(),
-        password: this.elements.password.value,
-        isAdmin: this.elements.portalRole.value === 'admin'
-      };
-      fetch('/api/admin/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      })
-        .then(function (r) {
-          return r.json().then(function (data) {
-            return { ok: r.ok, data: data };
-          });
-        })
-        .then(function (result) {
-          if (!result.ok) throw new Error(result.data.error || 'Failed to create user');
-          AUTH_STATE.accessOverview = result.data;
-          renderAccessUI();
-          document.getElementById('create-user-form').reset();
-          setStatusMessage('create-user-msg', 'User created.');
-        })
-        .catch(function (err) {
-          setStatusMessage('create-user-msg', err.message, true);
-        });
-    });
 
     document.getElementById('grant-access-form').addEventListener('submit', function (e) {
       e.preventDefault();

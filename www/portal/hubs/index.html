@@ -12,6 +12,7 @@
     <a href="/" class="logo"><em>Awan</em>Saya</a>
     <nav>
       <a href="/portal/">Dashboard</a>
+      <a id="admin-link" href="/portal/admin/" class="hidden">Admin</a>
     </nav>
     <div class="user-area">
       <a id="signin-link" href="/sign-in/?next=%2Fportal%2Fhubs%2F">Sign In</a>
@@ -37,6 +38,7 @@
           <nav class="side-nav-links">
             <a href="/portal/hubs/">Top</a>
             <a href="/portal/hubs/#hub-management">Hub Management</a>
+            <a href="/portal/hubs/#hub-members">Members &amp; Invitations</a>
           </nav>
         </div>
       </aside>
@@ -75,6 +77,39 @@
         </div>
       </div>
       <p class="last-updated" id="last-updated"></p>
+    </div>
+
+    <div class="card" id="hub-members">
+      <div class="card-head">
+        <div class="card-head-copy">
+          <h2><span class="info-heading">&#x1F465; Members &amp; Invitations <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About Members &amp; Invitations">?</button><span class="info-tip-popup" role="tooltip">Invite users by email to your hubs. Existing portal users get a dashboard notification; new users can sign up at /sign-up/.</span></span></span></h2>
+        </div>
+      </div>
+
+      <div class="section-stack">
+        <div class="subcard">
+          <h3><span class="info-heading">Invite to Hub <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About Invite to Hub">?</button><span class="info-tip-popup" role="tooltip">Choose a hub and enter an email address. If the user doesn&rsquo;t have an account yet, tell them to register at /sign-up/ with the same email.</span></span></span></h3>
+          <form class="admin-form stacked-form" id="invite-form">
+            <select name="hubName" id="invite-hub-select" title="Hub" aria-label="Hub" required></select>
+            <input name="email" type="email" placeholder="user@example.com" required>
+            <label>Role
+              <select name="role">
+                <option value="viewer" selected>Viewer</option>
+                <option value="admin">Admin</option>
+              </select>
+            </label>
+            <div class="full-span">
+              <button type="submit">Send Invitation</button>
+            </div>
+          </form>
+          <div class="status-msg" id="invite-msg"></div>
+        </div>
+
+        <div class="subcard">
+          <h3><span class="info-heading">Hub Members <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About Hub Members">?</button><span class="info-tip-popup" role="tooltip">Users with access to each of your hubs, including pending invitations.</span></span></span></h3>
+          <div id="hub-members-content"><p class="no-data">Loading...</p></div>
+        </div>
+      </div>
     </div>
       </div>
     </div>
@@ -327,10 +362,163 @@
       }
     })();
 
+    // ── Members & Invitations ─────────────────────────────────────
+    function populateHubSelect() {
+      var select = document.getElementById('invite-hub-select');
+      select.innerHTML = '';
+      HUBS.forEach(function (hub) {
+        if (!hub.canManage) return;
+        var opt = document.createElement('option');
+        opt.value = hub.name;
+        opt.textContent = hub.name;
+        select.appendChild(opt);
+      });
+    }
+
+    function fetchHubMembers() {
+      var manageable = HUBS.filter(function (h) { return h.canManage; });
+      return Promise.all(manageable.map(function (hub) {
+        var membersP = fetch('/api/hubs/' + encodeURIComponent(hub.name) + '/invitations')
+          .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+          .catch(function () { return { members: [], invitations: [] }; });
+        return membersP.then(function (data) {
+          return { hub: hub, members: data.members || [], invitations: data.invitations || [] };
+        });
+      }));
+    }
+
+    function renderHubMembers(hubData) {
+      var container = document.getElementById('hub-members-content');
+      if (!hubData || hubData.length === 0) {
+        container.innerHTML = '<p class="no-data">No manageable hubs.</p>';
+        return;
+      }
+
+      var html = '';
+      hubData.forEach(function (hd) {
+        html += '<h4 style="margin:16px 0 8px">' + escHtml(hd.hub.name) + '</h4>';
+
+        if (hd.members.length === 0 && hd.invitations.length === 0) {
+          html += '<p class="no-data">No members or pending invitations.</p>';
+          return;
+        }
+
+        html += '<table class="admin-table has-actions"><thead><tr><th>User</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead><tbody>';
+
+        hd.members.forEach(function (m) {
+          var actions = '';
+          if (m.role !== 'owner') {
+            actions = '<button class="btn-remove" type="button" onclick=\'revokeAccess(' + JSON.stringify(escHtml(hd.hub.name)) + ', ' + Number(m.userId) + ', ' + JSON.stringify(escHtml(m.displayName || m.email)) + ')\'>Revoke</button>';
+          }
+          html += '<tr>'
+            + '<td><strong>' + escHtml(m.displayName || m.email) + '</strong><br><span class="hub-url">' + escHtml(m.email) + '</span></td>'
+            + '<td><span class="pill' + (m.role === 'owner' ? ' owner' : m.role === 'admin' ? ' admin' : '') + '">' + escHtml(m.role) + '</span></td>'
+            + '<td>Active</td>'
+            + '<td class="action-cell">' + actions + '</td>'
+            + '</tr>';
+        });
+
+        hd.invitations.forEach(function (inv) {
+          if (inv.status !== 'pending') return;
+          var actions = '<button class="btn-remove" type="button" onclick=\'revokeInvitation(' + JSON.stringify(escHtml(hd.hub.name)) + ', ' + Number(inv.id) + ')\'>Cancel</button>';
+          html += '<tr>'
+            + '<td><span class="hub-url">' + escHtml(inv.email) + '</span></td>'
+            + '<td><span class="pill">' + escHtml(inv.role) + '</span></td>'
+            + '<td><span class="pill" style="background:#fff4d6;color:#8a5b00">Pending</span></td>'
+            + '<td class="action-cell">' + actions + '</td>'
+            + '</tr>';
+        });
+
+        html += '</tbody></table>';
+      });
+
+      container.innerHTML = html;
+    }
+
+    function refreshMembers() {
+      return fetchHubMembers().then(renderHubMembers).catch(function () {
+        document.getElementById('hub-members-content').innerHTML = '<p class="no-data">Failed to load members.</p>';
+      });
+    }
+
+    window.revokeAccess = function (hubName, userId, displayName) {
+      if (!confirm('Revoke access for ' + displayName + ' on ' + hubName + '?')) return;
+      fetch('/api/hubs/' + encodeURIComponent(hubName) + '/members?userId=' + encodeURIComponent(userId), {
+        method: 'DELETE'
+      })
+        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+        .then(function (result) {
+          if (!result.ok) throw new Error(result.data.error || 'Failed to revoke access');
+          setStatusMessage('invite-msg', 'Access revoked.');
+          refreshMembers();
+        })
+        .catch(function (err) {
+          setStatusMessage('invite-msg', err.message, true);
+        });
+    };
+
+    window.revokeInvitation = function (hubName, invitationId) {
+      if (!confirm('Cancel this invitation?')) return;
+      fetch('/api/hubs/' + encodeURIComponent(hubName) + '/invitations?id=' + encodeURIComponent(invitationId), {
+        method: 'DELETE'
+      })
+        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+        .then(function (result) {
+          if (!result.ok) throw new Error(result.data.error || 'Failed to cancel invitation');
+          setStatusMessage('invite-msg', 'Invitation cancelled.');
+          refreshMembers();
+        })
+        .catch(function (err) {
+          setStatusMessage('invite-msg', err.message, true);
+        });
+    };
+
+    document.getElementById('invite-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var form = this;
+      var hubName = form.elements.hubName.value;
+      var email = form.elements.email.value.trim().toLowerCase();
+      var role = form.elements.role.value;
+
+      if (!hubName || !email) return;
+
+      var btn = form.querySelector('button[type="submit"]');
+      btn.disabled = true;
+      btn.textContent = 'Sending…';
+
+      fetch('/api/hubs/' + encodeURIComponent(hubName) + '/invitations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email, role: role })
+      })
+        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+        .then(function (result) {
+          btn.disabled = false;
+          btn.textContent = 'Send Invitation';
+          if (!result.ok) throw new Error(result.data.error || 'Failed to send invitation');
+          form.elements.email.value = '';
+          var msg = 'Invitation sent to ' + email + '.';
+          if (result.data.accountExists === false) {
+            msg += ' Note: no account exists for this email yet — tell them to register at /sign-up/ with the same address.';
+          }
+          setStatusMessage('invite-msg', msg);
+          refreshMembers();
+        })
+        .catch(function (err) {
+          btn.disabled = false;
+          btn.textContent = 'Send Invitation';
+          setStatusMessage('invite-msg', err.message, true);
+        });
+    });
+
     function boot() {
       fetchAuthMode()
         .then(function () {
           updateUserChrome();
+          if (AUTH_STATE.canManageHubs) {
+            var al = document.getElementById('admin-link');
+            if (al) al.classList.remove('hidden');
+          }
           if (!AUTH_STATE.authenticated) {
             window.location.href = '/sign-in/?next=%2Fportal%2Fhubs%2F';
             return Promise.reject(new Error('signin'));
@@ -339,7 +527,10 @@
             window.location.href = '/portal/';
             return Promise.reject(new Error('dashboard'));
           }
-          return refreshHubManagementData();
+          return refreshHubManagementData().then(function () {
+            populateHubSelect();
+            return refreshMembers();
+          });
         })
         .catch(function (err) {
           if (err && (err.message === 'signin' || err.message === 'dashboard')) return;

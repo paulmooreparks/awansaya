@@ -203,6 +203,68 @@ async function initDatabase() {
     FOR EACH ROW
     EXECUTE FUNCTION set_updated_at()
   `);
+
+  // ── Hub invitations ────────────────────────────────────────────
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS hub_invitations (
+      id BIGSERIAL PRIMARY KEY,
+      hub_id BIGINT NOT NULL REFERENCES hubs(id) ON DELETE CASCADE,
+      invited_by BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      email TEXT NOT NULL,
+      role TEXT NOT NULL DEFAULT 'viewer',
+      status TEXT NOT NULL DEFAULT 'pending',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      resolved_at TIMESTAMPTZ
+    )
+  `);
+
+  await pool.query(`
+    ALTER TABLE hub_invitations
+    DROP CONSTRAINT IF EXISTS hub_invitations_role_check
+  `);
+  await pool.query(`
+    ALTER TABLE hub_invitations
+    ADD CONSTRAINT hub_invitations_role_check
+    CHECK (role IN ('viewer', 'admin'))
+  `);
+
+  await pool.query(`
+    ALTER TABLE hub_invitations
+    DROP CONSTRAINT IF EXISTS hub_invitations_status_check
+  `);
+  await pool.query(`
+    ALTER TABLE hub_invitations
+    ADD CONSTRAINT hub_invitations_status_check
+    CHECK (status IN ('pending', 'accepted', 'declined', 'revoked'))
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_hub_invitations_email ON hub_invitations(email)
+  `);
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_hub_invitations_hub_id ON hub_invitations(hub_id)
+  `);
+
+  // ── Password reset codes ───────────────────────────────────────
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS password_reset_codes (
+      id BIGSERIAL PRIMARY KEY,
+      user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      code_hash TEXT NOT NULL,
+      expires_at TIMESTAMPTZ NOT NULL,
+      used_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_password_reset_codes_user_id ON password_reset_codes(user_id)
+  `);
+
+  // Allow users table to have a sentinel password_hash for invited accounts
+  await pool.query(`
+    ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL
+  `);
 }
 
 function hashPassword(password, saltHex) {
@@ -605,11 +667,12 @@ async function insertHub(name, hubUrl, viewerToken, ownerUserId) {
 
 async function createUserAccount(email, displayName, password, isAdmin) {
   try {
+    const pwHash = password ? hashPassword(password) : null;
     const result = await pool.query(
       `INSERT INTO users (email, display_name, password_hash, is_admin)
        VALUES ($1, $2, $3, $4)
        RETURNING id, email, display_name AS "displayName", is_admin AS "isAdmin"`,
-      [email, displayName, hashPassword(password), !!isAdmin]
+      [email, displayName, pwHash, !!isAdmin]
     );
     return result.rows[0];
   } catch (err) {
@@ -620,6 +683,203 @@ async function createUserAccount(email, displayName, password, isAdmin) {
     }
     throw err;
   }
+}
+
+// ── Hub Invitations ──────────────────────────────────────────────
+
+async function createHubInvitation(hubId, email, role, invitedBy) {
+  // Check for existing pending invitation
+  const existing = await pool.query(
+    "SELECT id FROM hub_invitations WHERE hub_id = $1 AND email = $2 AND status = 'pending'",
+    [hubId, email]
+  );
+  if (existing.rowCount > 0) {
+    const conflict = new Error('pending invitation already exists for this email and hub');
+    conflict.statusCode = 409;
+    throw conflict;
+  }
+  const result = await pool.query(
+    `INSERT INTO hub_invitations (hub_id, invited_by, email, role)
+     VALUES ($1, $2, $3, $4)
+     RETURNING id, hub_id AS "hubId", email, role, status, created_at AS "createdAt"`,
+    [hubId, invitedBy, email, role]
+  );
+  return result.rows[0];
+}
+
+async function listHubInvitations(hubId) {
+  const result = await pool.query(
+    `SELECT hi.id, hi.email, hi.role, hi.status,
+            hi.created_at AS "createdAt", hi.resolved_at AS "resolvedAt",
+            u.display_name AS "invitedByName"
+     FROM hub_invitations hi
+     JOIN users u ON u.id = hi.invited_by
+     WHERE hi.hub_id = $1
+     ORDER BY hi.created_at DESC`,
+    [hubId]
+  );
+  return result.rows;
+}
+
+async function listPendingInvitationsForUser(userId) {
+  const result = await pool.query(
+    `SELECT hi.id, hi.role, hi.status,
+            hi.created_at AS "createdAt",
+            h.name AS "hubName",
+            u.display_name AS "invitedByName"
+     FROM hub_invitations hi
+     JOIN hubs h ON h.id = hi.hub_id
+     JOIN users u ON u.id = hi.invited_by
+     JOIN users target ON target.email = hi.email
+     WHERE target.id = $1 AND hi.status = 'pending'
+     ORDER BY hi.created_at DESC`,
+    [userId]
+  );
+  return result.rows;
+}
+
+async function listPendingInvitationsForEmail(email) {
+  const result = await pool.query(
+    `SELECT hi.id, hi.role, hi.hub_id AS "hubId",
+            h.name AS "hubName"
+     FROM hub_invitations hi
+     JOIN hubs h ON h.id = hi.hub_id
+     WHERE hi.email = $1 AND hi.status = 'pending'`,
+    [email]
+  );
+  return result.rows;
+}
+
+async function acceptInvitation(invitationId, userId) {
+  const inv = await pool.query(
+    `SELECT hi.id, hi.hub_id, hi.email, hi.role, hi.status
+     FROM hub_invitations hi
+     JOIN users u ON u.email = hi.email
+     WHERE hi.id = $1 AND u.id = $2`,
+    [invitationId, userId]
+  );
+  if (inv.rowCount === 0) {
+    const notFound = new Error('invitation not found');
+    notFound.statusCode = 404;
+    throw notFound;
+  }
+  const row = inv.rows[0];
+  if (row.status !== 'pending') {
+    const conflict = new Error('invitation is no longer pending');
+    conflict.statusCode = 409;
+    throw conflict;
+  }
+  // Create hub membership
+  await pool.query(
+    `INSERT INTO hub_memberships (hub_id, user_id, role)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (hub_id, user_id) DO UPDATE SET role = EXCLUDED.role`,
+    [row.hub_id, userId, row.role]
+  );
+  // Mark accepted
+  await pool.query(
+    "UPDATE hub_invitations SET status = 'accepted', resolved_at = NOW() WHERE id = $1",
+    [invitationId]
+  );
+}
+
+async function declineInvitation(invitationId, userId) {
+  const inv = await pool.query(
+    `SELECT hi.id, hi.status
+     FROM hub_invitations hi
+     JOIN users u ON u.email = hi.email
+     WHERE hi.id = $1 AND u.id = $2`,
+    [invitationId, userId]
+  );
+  if (inv.rowCount === 0) {
+    const notFound = new Error('invitation not found');
+    notFound.statusCode = 404;
+    throw notFound;
+  }
+  if (inv.rows[0].status !== 'pending') {
+    const conflict = new Error('invitation is no longer pending');
+    conflict.statusCode = 409;
+    throw conflict;
+  }
+  await pool.query(
+    "UPDATE hub_invitations SET status = 'declined', resolved_at = NOW() WHERE id = $1",
+    [invitationId]
+  );
+}
+
+async function revokeHubInvitation(invitationId, hubId) {
+  const result = await pool.query(
+    "UPDATE hub_invitations SET status = 'revoked', resolved_at = NOW() WHERE id = $1 AND hub_id = $2 AND status = 'pending'",
+    [invitationId, hubId]
+  );
+  if (result.rowCount === 0) {
+    const notFound = new Error('pending invitation not found');
+    notFound.statusCode = 404;
+    throw notFound;
+  }
+}
+
+// ── Password reset codes ─────────────────────────────────────────
+
+function generateResetCode() {
+  // 6-digit numeric code
+  const num = crypto.randomInt(100000, 999999);
+  return String(num);
+}
+
+async function createPasswordResetCode(userId) {
+  // Invalidate any previous unused codes
+  await pool.query(
+    "DELETE FROM password_reset_codes WHERE user_id = $1 AND used_at IS NULL",
+    [userId]
+  );
+  const rawCode = generateResetCode();
+  const codeHash = sha256(rawCode);
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+  await pool.query(
+    'INSERT INTO password_reset_codes (user_id, code_hash, expires_at) VALUES ($1, $2, $3)',
+    [userId, codeHash, expiresAt]
+  );
+  return rawCode;
+}
+
+async function verifyAndConsumeResetCode(email, code) {
+  const codeHash = sha256(code);
+  const result = await pool.query(
+    `SELECT prc.id, prc.user_id
+     FROM password_reset_codes prc
+     JOIN users u ON u.id = prc.user_id
+     WHERE u.email = $1
+       AND prc.code_hash = $2
+       AND prc.used_at IS NULL
+       AND prc.expires_at > NOW()
+     ORDER BY prc.created_at DESC
+     LIMIT 1`,
+    [email, codeHash]
+  );
+  if (result.rowCount === 0) return null;
+  const row = result.rows[0];
+  // Mark consumed
+  await pool.query(
+    'UPDATE password_reset_codes SET used_at = NOW() WHERE id = $1',
+    [row.id]
+  );
+  return { userId: row.user_id };
+}
+
+// ── Hub members for hub owner/admin view ─────────────────────────
+
+async function listHubMembers(hubId) {
+  const result = await pool.query(
+    `SELECT u.id AS "userId", u.email, u.display_name AS "displayName",
+            hm.role, hm.created_at AS "memberSince"
+     FROM hub_memberships hm
+     JOIN users u ON u.id = hm.user_id
+     WHERE hm.hub_id = $1
+     ORDER BY hm.role ASC, u.email ASC`,
+    [hubId]
+  );
+  return result.rows;
 }
 
 async function upsertHubMembershipByName(userId, hubName, role) {
@@ -753,7 +1013,11 @@ async function apiLogin(req, res) {
 
     try {
       const user = await findUserByEmail(email);
-      if (!user || !verifyPassword(password, user.passwordHash)) {
+      if (!user) return jsonError(res, 401, 'invalid credentials');
+      if (!user.passwordHash) {
+        return jsonError(res, 403, 'your account has not been activated yet — use the setup code at /reset-password/ to set your password');
+      }
+      if (!verifyPassword(password, user.passwordHash)) {
         return jsonError(res, 401, 'invalid credentials');
       }
       const session = await createSession(user.id);
@@ -792,30 +1056,112 @@ async function apiAdminGetAccess(req, res) {
   }
 }
 
+async function apiAdminListUsers(req, res) {
+  if (!await checkManageAuth(req, res)) return;
+  try {
+    const users = await listUsersForAdmin();
+    jsonOK(res, { users });
+  } catch (err) {
+    jsonError(res, 500, 'database error');
+  }
+}
+
 function apiAdminCreateUser(req, res) {
   checkManageAuth(req, res).then(allowed => {
     if (!allowed) return;
-    readBody(req, (err, body) => {
+    readBody(req, async (err, body) => {
       if (err || !body) return jsonError(res, 400, 'invalid JSON body');
 
       const email = normalizeEmail(body.email);
       const displayName = String(body.displayName || '').trim();
-      const password = String(body.password || '');
       const isAdmin = !!body.isAdmin;
 
-      if (!email || !displayName || !password) return jsonError(res, 400, 'displayName, email, and password are required');
+      if (!email || !displayName) return jsonError(res, 400, 'displayName and email are required');
       if (!isValidEmail(email)) return jsonError(res, 400, 'valid email is required');
-      if (password.length < 8) return jsonError(res, 400, 'password must be at least 8 characters');
 
-      createUserAccount(email, displayName, password, isAdmin)
-        .then(async () => {
-          jsonOK(res, await getAdminAccessOverview());
-        })
-        .catch(dbErr => {
-          jsonError(res, dbErr.statusCode || 500, dbErr.statusCode ? dbErr.message : 'database error');
+      try {
+        // Create stub account (no password)
+        const newUser = await createUserAccount(email, displayName, null, isAdmin);
+        // Generate a reset code so the user can set their password
+        const code = await createPasswordResetCode(newUser.id);
+        const overview = await getAdminAccessOverview();
+        jsonOK(res, {
+          ...overview,
+          setupCode: code,
+          setupEmail: email,
+          message: 'Account created. Share the setup code with the user — they\'ll use it at /reset-password/ to set their password. Code expires in 15 minutes.'
         });
+      } catch (dbErr) {
+        jsonError(res, dbErr.statusCode || 500, dbErr.statusCode ? dbErr.message : 'database error');
+      }
     });
   });
+}
+
+async function apiAdminUpdateUser(req, res) {
+  if (!await checkManageAuth(req, res)) return;
+  readBody(req, async (err, body) => {
+    if (err || !body) return jsonError(res, 400, 'invalid JSON body');
+    const userId = Number(body.id);
+    if (!Number.isInteger(userId) || userId <= 0) return jsonError(res, 400, 'valid id is required');
+
+    try {
+      const sessionUser = await getSessionUser(req, true);
+      const updates = [];
+      const params = [];
+      let paramIdx = 1;
+
+      if (body.displayName !== undefined) {
+        const displayName = String(body.displayName).trim();
+        if (!displayName) return jsonError(res, 400, 'displayName cannot be empty');
+        updates.push('display_name = $' + paramIdx++);
+        params.push(displayName);
+      }
+
+      if (body.isAdmin !== undefined) {
+        if (sessionUser && Number(sessionUser.id) === userId && !body.isAdmin) {
+          return jsonError(res, 400, 'cannot remove your own admin access');
+        }
+        updates.push('is_admin = $' + paramIdx++);
+        params.push(!!body.isAdmin);
+      }
+
+      // Password changes are handled via reset codes — admins cannot set passwords directly
+
+      if (updates.length === 0) return jsonError(res, 400, 'no fields to update');
+
+      params.push(userId);
+      const result = await pool.query(
+        'UPDATE users SET ' + updates.join(', ') + ' WHERE id = $' + paramIdx,
+        params
+      );
+
+      if (result.rowCount === 0) return jsonError(res, 404, 'user not found');
+      jsonOK(res, { users: await listUsersForAdmin() });
+    } catch (err2) {
+      jsonError(res, 500, 'database error');
+    }
+  });
+}
+
+async function apiAdminDeleteUser(req, res) {
+  if (!await checkManageAuth(req, res)) return;
+  const u = new URL(req.url, 'http://localhost');
+  const userId = Number(u.searchParams.get('id'));
+  if (!Number.isInteger(userId) || userId <= 0) return jsonError(res, 400, 'valid id is required');
+
+  try {
+    const sessionUser = await getSessionUser(req, true);
+    if (sessionUser && Number(sessionUser.id) === userId) {
+      return jsonError(res, 400, 'cannot delete your own account');
+    }
+
+    const result = await pool.query('DELETE FROM users WHERE id = $1', [userId]);
+    if (result.rowCount === 0) return jsonError(res, 404, 'user not found');
+    jsonOK(res, { users: await listUsersForAdmin() });
+  } catch (err) {
+    jsonError(res, 500, 'database error');
+  }
 }
 
 function apiAdminUpsertMembership(req, res) {
@@ -858,6 +1204,316 @@ async function apiAdminDeleteMembership(req, res) {
   } catch (err) {
     jsonError(res, err.statusCode || 500, err.statusCode ? err.message : 'database error');
   }
+}
+
+// ── Hub invitation API ─────────────────────────────────────────────
+
+// POST /api/hubs/:name/invitations — invite a user to a hub
+async function apiCreateHubInvitation(req, res, hubName) {
+  const user = await requireAuthenticated(req, res);
+  if (!user) return;
+
+  // User must be hub owner or hub admin (or portal admin)
+  const hub = await lookupHubForUser(user, hubName);
+  if (!hub) return jsonError(res, 404, 'hub not found');
+  if (!hub.canManage) return jsonError(res, 403, 'you do not have admin access to this hub');
+
+  readBody(req, async (err, body) => {
+    if (err || !body) return jsonError(res, 400, 'invalid JSON body');
+    const email = normalizeEmail(body.email);
+    const role = String(body.role || 'viewer').trim().toLowerCase();
+    if (!email) return jsonError(res, 400, 'email is required');
+    if (!isValidEmail(email)) return jsonError(res, 400, 'valid email is required');
+    if (role !== 'viewer' && role !== 'admin') return jsonError(res, 400, 'role must be viewer or admin');
+
+    // Don't allow inviting yourself
+    if (email === user.email) return jsonError(res, 400, 'cannot invite yourself');
+
+    try {
+      const invitation = await createHubInvitation(hub.id, email, role, user.id);
+      // Check if the target user already exists
+      const targetUser = await findUserByEmail(email);
+      jsonOK(res, {
+        invitation,
+        userExists: !!targetUser,
+        message: targetUser
+          ? 'Invitation created. The user will see it on their dashboard.'
+          : 'No account for this email. Ask them to sign up at /sign-up/ with this email address.'
+      });
+    } catch (dbErr) {
+      jsonError(res, dbErr.statusCode || 500, dbErr.statusCode ? dbErr.message : 'database error');
+    }
+  });
+}
+
+// GET /api/hubs/:name/invitations — list invitations for a hub
+async function apiListHubInvitations(req, res, hubName) {
+  const user = await requireAuthenticated(req, res);
+  if (!user) return;
+  const hub = await lookupHubForUser(user, hubName);
+  if (!hub) return jsonError(res, 404, 'hub not found');
+  if (!hub.canManage) return jsonError(res, 403, 'you do not have admin access to this hub');
+
+  try {
+    const [members, invitations] = await Promise.all([
+      listHubMembers(hub.id),
+      listHubInvitations(hub.id),
+    ]);
+    jsonOK(res, { members, invitations });
+  } catch (err2) {
+    jsonError(res, 500, 'database error');
+  }
+}
+
+// DELETE /api/hubs/:name/invitations?id=<id> — revoke a pending invitation
+async function apiRevokeHubInvitation(req, res, hubName) {
+  const user = await requireAuthenticated(req, res);
+  if (!user) return;
+  const hub = await lookupHubForUser(user, hubName);
+  if (!hub) return jsonError(res, 404, 'hub not found');
+  if (!hub.canManage) return jsonError(res, 403, 'you do not have admin access to this hub');
+
+  const u = new URL(req.url, 'http://localhost');
+  const invId = Number(u.searchParams.get('id'));
+  if (!Number.isInteger(invId) || invId <= 0) return jsonError(res, 400, 'valid id is required');
+
+  try {
+    await revokeHubInvitation(invId, hub.id);
+    jsonOK(res, { invitations: await listHubInvitations(hub.id) });
+  } catch (err2) {
+    jsonError(res, err2.statusCode || 500, err2.statusCode ? err2.message : 'database error');
+  }
+}
+
+// GET /api/hubs/:name/members — list members for a hub
+async function apiListHubMembers(req, res, hubName) {
+  const user = await requireAuthenticated(req, res);
+  if (!user) return;
+  const hub = await lookupHubForUser(user, hubName);
+  if (!hub) return jsonError(res, 404, 'hub not found');
+  if (!hub.canManage) return jsonError(res, 403, 'you do not have admin access to this hub');
+
+  try {
+    jsonOK(res, { members: await listHubMembers(hub.id) });
+  } catch (err2) {
+    jsonError(res, 500, 'database error');
+  }
+}
+
+// DELETE /api/hubs/:name/members?userId=<id> — remove a member from a hub
+async function apiRemoveHubMember(req, res, hubName) {
+  const user = await requireAuthenticated(req, res);
+  if (!user) return;
+  const hub = await lookupHubForUser(user, hubName);
+  if (!hub) return jsonError(res, 404, 'hub not found');
+  if (!hub.canManage) return jsonError(res, 403, 'you do not have admin access to this hub');
+
+  const u = new URL(req.url, 'http://localhost');
+  const targetUserId = Number(u.searchParams.get('userId'));
+  if (!Number.isInteger(targetUserId) || targetUserId <= 0) return jsonError(res, 400, 'valid userId is required');
+
+  try {
+    await pool.query(
+      'DELETE FROM hub_memberships WHERE hub_id = $1 AND user_id = $2 AND role != $3',
+      [hub.id, targetUserId, 'owner']
+    );
+    jsonOK(res, { members: await listHubMembers(hub.id) });
+  } catch (err2) {
+    jsonError(res, 500, 'database error');
+  }
+}
+
+// ── My invitations ─────────────────────────────────────────────────
+
+// GET /api/my/invitations — list my pending hub invitations
+async function apiMyInvitations(req, res) {
+  const user = await requireAuthenticated(req, res);
+  if (!user) return;
+  try {
+    jsonOK(res, { invitations: await listPendingInvitationsForUser(user.id) });
+  } catch (err2) {
+    jsonError(res, 500, 'database error');
+  }
+}
+
+// POST /api/my/invitations/:id/accept
+async function apiAcceptInvitation(req, res, invId) {
+  const user = await requireAuthenticated(req, res);
+  if (!user) return;
+  try {
+    await acceptInvitation(invId, user.id);
+    jsonOK(res, { invitations: await listPendingInvitationsForUser(user.id) });
+  } catch (err2) {
+    jsonError(res, err2.statusCode || 500, err2.statusCode ? err2.message : 'database error');
+  }
+}
+
+// POST /api/my/invitations/:id/decline
+async function apiDeclineInvitation(req, res, invId) {
+  const user = await requireAuthenticated(req, res);
+  if (!user) return;
+  try {
+    await declineInvitation(invId, user.id);
+    jsonOK(res, { invitations: await listPendingInvitationsForUser(user.id) });
+  } catch (err2) {
+    jsonError(res, err2.statusCode || 500, err2.statusCode ? err2.message : 'database error');
+  }
+}
+
+// ── Sign-up (invitation-bound) ─────────────────────────────────────
+
+// POST /api/sign-up — create account (email must match a pending invitation OR admin-created stub)
+async function apiSignUp(req, res) {
+  readBody(req, async (err, body) => {
+    if (err || !body) return jsonError(res, 400, 'invalid JSON body');
+    const email = normalizeEmail(body.email);
+    const displayName = String(body.displayName || '').trim();
+    const password = String(body.password || '');
+
+    if (!email || !isValidEmail(email)) return jsonError(res, 400, 'valid email is required');
+    if (!displayName) return jsonError(res, 400, 'display name is required');
+    if (password.length < 8) return jsonError(res, 400, 'password must be at least 8 characters');
+
+    try {
+      // Check if account already exists
+      const existingUser = await findUserByEmail(email);
+      if (existingUser) {
+        // If account exists but has no password (admin-created stub), let them set their password
+        if (existingUser.passwordHash) {
+          return jsonError(res, 409, 'an account with this email already exists — please sign in');
+        }
+        // Activate the stub account
+        await pool.query(
+          'UPDATE users SET password_hash = $1, display_name = $2 WHERE id = $3',
+          [hashPassword(password), displayName, existingUser.id]
+        );
+        // Sign them in
+        const session = await createSession(existingUser.id);
+        appendSetCookie(res, buildSessionCookie(req, session.token, session.maxAgeSeconds));
+        return jsonOK(res, { authenticated: true, message: 'Account activated. Welcome!' });
+      }
+
+      // No account — check for pending hub invitations
+      const pendingInvitations = await listPendingInvitationsForEmail(email);
+      if (pendingInvitations.length === 0) {
+        return jsonError(res, 403, 'no pending invitation found for this email address');
+      }
+
+      // Create the account
+      const newUser = await createUserAccount(email, displayName, password, false);
+      // Sign them in
+      const session = await createSession(newUser.id);
+      appendSetCookie(res, buildSessionCookie(req, session.token, session.maxAgeSeconds));
+      jsonOK(res, { authenticated: true, message: 'Account created. Welcome!' });
+    } catch (dbErr) {
+      jsonError(res, dbErr.statusCode || 500, dbErr.statusCode ? dbErr.message : 'database error');
+    }
+  });
+}
+
+// ── Password management ────────────────────────────────────────────
+
+// PATCH /api/me/password — change own password (requires current password)
+async function apiChangePassword(req, res) {
+  const user = await requireAuthenticated(req, res);
+  if (!user) return;
+
+  readBody(req, async (err, body) => {
+    if (err || !body) return jsonError(res, 400, 'invalid JSON body');
+    const currentPassword = String(body.currentPassword || '');
+    const newPassword = String(body.newPassword || '');
+
+    if (!currentPassword) return jsonError(res, 400, 'current password is required');
+    if (newPassword.length < 8) return jsonError(res, 400, 'new password must be at least 8 characters');
+
+    try {
+      const fullUser = await findUserByEmail(user.email);
+      if (!fullUser || !verifyPassword(currentPassword, fullUser.passwordHash)) {
+        return jsonError(res, 401, 'current password is incorrect');
+      }
+      await pool.query(
+        'UPDATE users SET password_hash = $1 WHERE id = $2',
+        [hashPassword(newPassword), user.id]
+      );
+      jsonOK(res, { message: 'Password changed successfully.' });
+    } catch (err2) {
+      jsonError(res, 500, 'database error');
+    }
+  });
+}
+
+// POST /api/forgot-password — request a reset code (shown on screen in Phase 1)
+async function apiForgotPassword(req, res) {
+  readBody(req, async (err, body) => {
+    if (err || !body) return jsonError(res, 400, 'invalid JSON body');
+    const email = normalizeEmail(body.email);
+    if (!email || !isValidEmail(email)) return jsonError(res, 400, 'valid email is required');
+
+    try {
+      const user = await findUserByEmail(email);
+      if (!user) {
+        // Don't reveal whether email exists — just say "if an account exists, a code has been generated"
+        return jsonOK(res, { message: 'If an account exists for this email, a reset code has been generated.', code: null });
+      }
+      const code = await createPasswordResetCode(user.id);
+      // Phase 1: return the code directly (no SMTP)
+      // Phase 2: email the code and don't return it
+      jsonOK(res, { message: 'Reset code generated. It expires in 15 minutes.', code });
+    } catch (err2) {
+      jsonError(res, 500, 'database error');
+    }
+  });
+}
+
+// POST /api/reset-password — set new password using a reset code
+async function apiResetPassword(req, res) {
+  readBody(req, async (err, body) => {
+    if (err || !body) return jsonError(res, 400, 'invalid JSON body');
+    const email = normalizeEmail(body.email);
+    const code = String(body.code || '').trim();
+    const newPassword = String(body.newPassword || '');
+
+    if (!email || !isValidEmail(email)) return jsonError(res, 400, 'valid email is required');
+    if (!code) return jsonError(res, 400, 'reset code is required');
+    if (newPassword.length < 8) return jsonError(res, 400, 'new password must be at least 8 characters');
+
+    try {
+      const result = await verifyAndConsumeResetCode(email, code);
+      if (!result) return jsonError(res, 401, 'invalid or expired reset code');
+
+      await pool.query(
+        'UPDATE users SET password_hash = $1 WHERE id = $2',
+        [hashPassword(newPassword), result.userId]
+      );
+      jsonOK(res, { message: 'Password has been reset. You can now sign in.' });
+    } catch (err2) {
+      jsonError(res, 500, 'database error');
+    }
+  });
+}
+
+// POST /api/admin/reset-password — admin generates a reset code for a user
+async function apiAdminResetPassword(req, res) {
+  if (!await checkManageAuth(req, res)) return;
+  readBody(req, async (err, body) => {
+    if (err || !body) return jsonError(res, 400, 'invalid JSON body');
+    const userId = Number(body.userId);
+    if (!Number.isInteger(userId) || userId <= 0) return jsonError(res, 400, 'valid userId is required');
+
+    try {
+      const user = await pool.query('SELECT id, email FROM users WHERE id = $1', [userId]);
+      if (user.rowCount === 0) return jsonError(res, 404, 'user not found');
+      const code = await createPasswordResetCode(userId);
+      // Phase 1: return code to admin. Phase 2: email it.
+      jsonOK(res, {
+        code,
+        email: user.rows[0].email,
+        message: 'Reset code generated. Share it with the user — it expires in 15 minutes.'
+      });
+    } catch (err2) {
+      jsonError(res, 500, 'database error');
+    }
+  });
 }
 
 // ── Personal API Tokens ────────────────────────────────────────────
@@ -1083,6 +1739,13 @@ async function serve(req, res) {
 	if (urlPath === '/portal' || urlPath.startsWith('/portal/')) {
 		const user = await requireAuthenticated(req, res, { redirect: true });
 		if (!user) return;
+		if (urlPath.startsWith('/portal/admin')) {
+			if (!user.isAdmin) {
+				res.writeHead(302, { Location: '/portal/' });
+				res.end();
+				return;
+			}
+		}
 	}
 
   // Well-known discovery (RFC 8615)
@@ -1124,7 +1787,10 @@ async function serve(req, res) {
     res.writeHead(405); res.end(); return;
   }
   if (urlPath === '/api/admin/users') {
+    if (method === 'GET' || method === 'HEAD') return apiAdminListUsers(req, res);
     if (method === 'POST') return apiAdminCreateUser(req, res);
+    if (method === 'PATCH') return apiAdminUpdateUser(req, res);
+    if (method === 'DELETE') return apiAdminDeleteUser(req, res);
     res.writeHead(405); res.end(); return;
   }
   if (urlPath === '/api/admin/memberships') {
@@ -1132,10 +1798,58 @@ async function serve(req, res) {
     if (method === 'DELETE') return apiAdminDeleteMembership(req, res);
     res.writeHead(405); res.end(); return;
   }
+  if (urlPath === '/api/admin/reset-password') {
+    if (method === 'POST') return apiAdminResetPassword(req, res);
+    res.writeHead(405); res.end(); return;
+  }
   if (urlPath === '/api/tokens') {
     if (method === 'GET' || method === 'HEAD') return apiListTokens(req, res);
     if (method === 'POST') return apiCreateToken(req, res);
     if (method === 'DELETE') return apiDeleteToken(req, res);
+    res.writeHead(405); res.end(); return;
+  }
+  if (urlPath === '/api/my/invitations') {
+    if (method === 'GET' || method === 'HEAD') return apiMyInvitations(req, res);
+    res.writeHead(405); res.end(); return;
+  }
+  // POST /api/my/invitations/:id/accept or /decline
+  const myInvAccept = urlPath.match(/^\/api\/my\/invitations\/(\d+)\/accept$/);
+  if (myInvAccept && method === 'POST') return apiAcceptInvitation(req, res, Number(myInvAccept[1]));
+  const myInvDecline = urlPath.match(/^\/api\/my\/invitations\/(\d+)\/decline$/);
+  if (myInvDecline && method === 'POST') return apiDeclineInvitation(req, res, Number(myInvDecline[1]));
+
+  if (urlPath === '/api/sign-up') {
+    if (method === 'POST') return apiSignUp(req, res);
+    res.writeHead(405); res.end(); return;
+  }
+  if (urlPath === '/api/me/password') {
+    if (method === 'PATCH') return apiChangePassword(req, res);
+    res.writeHead(405); res.end(); return;
+  }
+  if (urlPath === '/api/forgot-password') {
+    if (method === 'POST') return apiForgotPassword(req, res);
+    res.writeHead(405); res.end(); return;
+  }
+  if (urlPath === '/api/reset-password') {
+    if (method === 'POST') return apiResetPassword(req, res);
+    res.writeHead(405); res.end(); return;
+  }
+
+  // /api/hubs/:name/invitations
+  const hubInvMatch = urlPath.match(/^\/api\/hubs\/([^/]+)\/invitations$/);
+  if (hubInvMatch) {
+    const hName = decodeURIComponent(hubInvMatch[1]);
+    if (method === 'GET' || method === 'HEAD') return apiListHubInvitations(req, res, hName);
+    if (method === 'POST') return apiCreateHubInvitation(req, res, hName);
+    if (method === 'DELETE') return apiRevokeHubInvitation(req, res, hName);
+    res.writeHead(405); res.end(); return;
+  }
+  // /api/hubs/:name/members
+  const hubMembersMatch = urlPath.match(/^\/api\/hubs\/([^/]+)\/members$/);
+  if (hubMembersMatch) {
+    const hName = decodeURIComponent(hubMembersMatch[1]);
+    if (method === 'GET' || method === 'HEAD') return apiListHubMembers(req, res, hName);
+    if (method === 'DELETE') return apiRemoveHubMember(req, res, hName);
     res.writeHead(405); res.end(); return;
   }
 
@@ -1186,12 +1900,40 @@ function sendFile(filePath, res) {
 
 const server = http.createServer(serve);
 
+async function ensureSuperAdminToken() {
+  if (!BOOTSTRAP_EMAIL) return;
+  const user = await findUserByEmail(BOOTSTRAP_EMAIL);
+  if (!user || !user.isAdmin) return;
+
+  const existing = await pool.query(
+    "SELECT id FROM user_api_tokens WHERE user_id = $1 AND name = 'super-admin'",
+    [user.id]
+  );
+  if (existing.rowCount > 0) return;
+
+  const rawToken = 'tela_' + crypto.randomBytes(32).toString('hex');
+  const tokenHash = sha256(rawToken);
+  const tokenPrefix = rawToken.slice(0, 12);
+
+  await pool.query(
+    'INSERT INTO user_api_tokens (user_id, name, token_hash, token_prefix) VALUES ($1, $2, $3, $4)',
+    [user.id, 'super-admin', tokenHash, tokenPrefix]
+  );
+
+  console.log('[awansaya] ========================================');
+  console.log('[awansaya] SUPER-ADMIN TOKEN for ' + user.email + ':');
+  console.log('[awansaya]   ' + rawToken);
+  console.log('[awansaya] Save this token — it will NOT be shown again.');
+  console.log('[awansaya] ========================================');
+}
+
 async function main() {
   await connectWithRetry();
   await initDatabase();
   await importLegacyConfigIfNeeded();
 	await ensureBootstrapAdmin();
 	await backfillHubOwnership();
+	await ensureSuperAdminToken();
   server.listen(PORT, () => {
     console.log(`[awansaya] listening on :${PORT}`);
   });

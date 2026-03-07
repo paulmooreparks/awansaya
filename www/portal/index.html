@@ -13,6 +13,7 @@
     <a href="/" class="logo"><em>Awan</em>Saya</a>
     <nav>
       <a href="/portal/" class="active">Dashboard</a>
+      <a id="admin-link" href="/portal/admin/" class="hidden">Admin</a>
     </nav>
     <div class="user-area">
       <a id="signin-link" href="/sign-in/?next=%2Fportal%2F">Sign In</a>
@@ -37,6 +38,7 @@
           <div class="side-nav-title">On this page</div>
           <nav class="side-nav-links">
             <a href="/portal/">Top</a>
+            <a id="invitations-nav-link" href="/portal/#invitations" class="hidden">Invitations</a>
             <a href="/portal/#operations">Hubs &amp; Machines</a>
             <a id="access-nav-link" href="/portal/#access" class="hidden">Access Overview</a>
             <a href="/portal/#activity">Recent Activity</a>
@@ -50,6 +52,15 @@
             <h1>Dashboard</h1>
             <p class="page-desc">Multi-hub management for Tela connectivity fabric</p>
           </div>
+        </div>
+
+        <div class="card hidden" id="invitations">
+      <div class="card-head">
+        <div class="card-head-copy">
+          <h2>&#x1F4E8; Pending Invitations</h2>
+        </div>
+      </div>
+      <div class="table-wrap" id="invitations-content"><p class="no-data">Loading...</p></div>
         </div>
 
         <div class="card" id="operations">
@@ -254,11 +265,61 @@
       var accessManageLink = document.getElementById('dashboard-access-manage-link');
       var accessRefreshBtn = document.getElementById('access-refresh-btn');
       var hubsManageLink = document.getElementById('dashboard-hubs-manage-link');
+      var adminLink = document.getElementById('admin-link');
       var method = AUTH_STATE.canManageHubs ? 'remove' : 'add';
+      if (adminLink) adminLink.classList[method]('hidden');
       if (accessNavLink) accessNavLink.classList[method]('hidden');
       if (accessManageLink) accessManageLink.classList[method]('hidden');
       if (accessRefreshBtn) accessRefreshBtn.classList[method]('hidden');
       if (hubsManageLink) hubsManageLink.classList[method]('hidden');
+    }
+
+    // ── Pending invitations ─────────────────────────────────────────
+    function fetchMyInvitations() {
+      if (!AUTH_STATE.authenticated) return Promise.resolve([]);
+      return fetch('/api/my/invitations')
+        .then(function (r) { return r.ok ? r.json() : { invitations: [] }; })
+        .then(function (data) { return (data && data.invitations) || []; })
+        .catch(function () { return []; });
+    }
+
+    function renderInvitations(invitations) {
+      var card = document.getElementById('invitations');
+      var navLink = document.getElementById('invitations-nav-link');
+      if (!invitations || invitations.length === 0) {
+        card.classList.add('hidden');
+        if (navLink) navLink.classList.add('hidden');
+        return;
+      }
+      card.classList.remove('hidden');
+      if (navLink) navLink.classList.remove('hidden');
+      var html = '<table class="admin-table"><thead><tr>'
+        + '<th>Hub</th><th>Role</th><th>Invited By</th><th></th>'
+        + '</tr></thead><tbody>';
+      invitations.forEach(function (inv) {
+        html += '<tr>'
+          + '<td><strong>' + escHtml(inv.hubName) + '</strong></td>'
+          + '<td><span class="pill ' + escHtml(inv.role) + '">' + escHtml(inv.role) + '</span></td>'
+          + '<td>' + escHtml(inv.invitedByName || '—') + '</td>'
+          + '<td>'
+          + '<button class="btn-action" onclick="respondInvitation(' + inv.id + ',true)">Accept</button> '
+          + '<button class="btn-action" style="background:#95a5a6" onclick="respondInvitation(' + inv.id + ',false)">Decline</button>'
+          + '</td>'
+          + '</tr>';
+      });
+      html += '</tbody></table>';
+      document.getElementById('invitations-content').innerHTML = html;
+    }
+
+    function respondInvitation(id, accept) {
+      var action = accept ? 'accept' : 'decline';
+      fetch('/api/my/invitations/' + id + '/' + action, { method: 'POST' })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          renderInvitations((data && data.invitations) || []);
+          if (accept) refreshDashboardDataGlobal();
+        })
+        .catch(function () { alert('Failed to ' + action + ' invitation.'); });
     }
 
     function setStatusMessage(id, text, isError) {
@@ -337,12 +398,16 @@
       }
     }
 
+    var refreshDashboardDataGlobal = function () {};
+
     function boot() {
       Promise.all([fetchHubList(), fetchAuthMode()]).then(function () {
-        return fetchAccessOverview();
-      }).then(function () {
+        return Promise.all([fetchAccessOverview(), fetchMyInvitations()]);
+      }).then(function (results) {
+        var invitations = results[1] || [];
         refreshAuthUI();
         refreshAccessUI();
+        renderInvitations(invitations);
         initDashboard();
       });
     }
@@ -607,6 +672,7 @@
       accessRefreshBtn.addEventListener('click', refreshAccessCard);
     }
 
+    refreshDashboardDataGlobal = refreshDashboardData;
     refreshDashboardData();
     document.getElementById('logout-btn').addEventListener('click', handleLogout);
 

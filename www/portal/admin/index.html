@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Administration — Awan Saya</title>
+  <link rel="stylesheet" href="/assets/styles/common.css">
+  <link rel="stylesheet" href="/assets/styles/portal.css">
+  <script src="/assets/scripts/password-toggle.js" defer></script>
+</head>
+<body>
+  <div class="topnav">
+    <a href="/" class="logo"><em>Awan</em>Saya</a>
+    <nav>
+      <a href="/portal/">Dashboard</a>
+      <a href="/portal/admin/" class="active">Admin</a>
+    </nav>
+    <div class="user-area">
+      <a id="signin-link" href="/sign-in/?next=%2Fportal%2Fadmin%2F">Sign In</a>
+      <div id="user-menu" class="user-menu hidden">
+        <button class="user-menu-trigger" id="user-menu-trigger" type="button">
+          <div class="avatar" id="user-avatar">G</div>
+          <span id="user-name">Guest</span>
+          <span class="chevron">&#x25BE;</span>
+        </button>
+        <div class="user-dropdown" id="user-dropdown">
+          <a href="/portal/settings/">Settings</a>
+          <button id="logout-btn" type="button">Sign out</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="page-layout">
+      <aside class="side-nav" aria-label="Section navigation">
+        <div class="side-nav-panel">
+          <div class="side-nav-title">On this page</div>
+          <nav class="side-nav-links">
+            <a href="/portal/admin/">Top</a>
+            <a href="/portal/admin/#create-user">Invite User</a>
+            <a href="/portal/admin/#user-directory">User Directory</a>
+          </nav>
+        </div>
+      </aside>
+
+      <div class="page-main">
+        <div class="page-head">
+          <div class="page-head-copy">
+            <h1><span class="info-heading">Platform Administration <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About Platform Administration">?</button><span class="info-tip-popup" role="tooltip">Manage all user accounts on the Awan Saya portal. This page is restricted to portal administrators.</span></span></span></h1>
+            <p class="page-desc">Super-admin user management &mdash; invitation-only accounts</p>
+          </div>
+          <div class="page-actions">
+            <a class="page-link-chip" href="/portal/">&larr; Back to dashboard</a>
+          </div>
+        </div>
+
+        <div class="card" id="user-management">
+          <h2><span class="info-heading">&#x1F464; User Management <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About User Management">?</button><span class="info-tip-popup" role="tooltip">Create, edit and remove portal accounts. Each user receives a login and can be promoted to portal admin.</span></span></span></h2>
+
+          <div class="section-stack">
+            <div class="subcard" id="create-user">
+              <h3><span class="info-heading">Invite User <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About Invite User">?</button><span class="info-tip-popup" role="tooltip">Create a stub account. A setup code will be generated — share it with the user so they can set their own password at /reset-password/.</span></span></span></h3>
+              <form class="admin-form stacked-form" id="create-user-form">
+                <input name="displayName" placeholder="Display name" required>
+                <input name="email" type="email" placeholder="user@example.com" autocomplete="email" required>
+                <label>Portal role
+                  <select name="portalRole">
+                    <option value="user" selected>Standard user</option>
+                    <option value="admin">Portal admin</option>
+                  </select>
+                </label>
+                <div class="full-span">
+                  <button type="submit">Create Account</button>
+                </div>
+              </form>
+              <div class="status-msg" id="create-user-msg"></div>
+              <div class="token-reveal hidden" id="setup-code-reveal">
+                <p><strong>Setup code for the new user</strong> — share this once. It expires in 15 minutes.</p>
+                <div class="token-value-wrap">
+                  <code class="token-value" id="setup-code-value"></code>
+                  <button class="panel-action-button" id="copy-setup-code-btn" type="button">Copy</button>
+                </div>
+                <p class="sub">The user should go to <a href="/reset-password/">/reset-password/</a>, enter their email and this code, then set their password.</p>
+              </div>
+            </div>
+
+            <div class="subcard" id="user-directory">
+              <h3><span class="info-heading">User Directory <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About User Directory">?</button><span class="info-tip-popup" role="tooltip">All portal accounts. You can toggle admin status, reset passwords, or remove users.</span></span></span></h3>
+              <div class="table-wrap" id="users-content"><p class="no-data">Loading...</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <a href="/">Awan Saya</a> &middot; Powered by <a href="https://github.com/paulmooreparks/tela">Tela</a>
+    &middot; <a href="https://github.com/paulmooreparks/awansaya">GitHub</a>
+  </footer>
+
+  <script>
+    var AUTH_STATE = {
+      authEnabled: false,
+      authenticated: false,
+      canManageHubs: false,
+      user: null,
+      users: []
+    };
+
+    function escHtml(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function isoTime(dateStr) {
+      if (!dateStr) return '';
+      var d = new Date(dateStr);
+      if (isNaN(d.getTime())) return '';
+      return d.getFullYear()
+        + '-' + String(d.getMonth() + 1).padStart(2, '0')
+        + '-' + String(d.getDate()).padStart(2, '0')
+        + ' ' + String(d.getHours()).padStart(2, '0')
+        + ':' + String(d.getMinutes()).padStart(2, '0')
+        + ':' + String(d.getSeconds()).padStart(2, '0');
+    }
+
+    function fetchAuthMode() {
+      return fetch('/api/auth-mode')
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          AUTH_STATE.authEnabled = !!(data && data.authEnabled);
+          AUTH_STATE.authenticated = !!(data && data.authenticated);
+          AUTH_STATE.canManageHubs = !!(data && data.canManageHubs);
+          AUTH_STATE.user = data && data.user ? data.user : null;
+        })
+        .catch(function () {
+          AUTH_STATE.authEnabled = false;
+          AUTH_STATE.authenticated = false;
+          AUTH_STATE.canManageHubs = false;
+          AUTH_STATE.user = null;
+        });
+    }
+
+    function fetchUsers() {
+      return fetch('/api/admin/users')
+        .then(function (r) {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.json();
+        })
+        .then(function (data) {
+          AUTH_STATE.users = (data && data.users) || [];
+          return AUTH_STATE.users;
+        });
+    }
+
+    function updateUserChrome() {
+      var nameEl = document.getElementById('user-name');
+      var avatarEl = document.getElementById('user-avatar');
+      var userMenu = document.getElementById('user-menu');
+      var signinLink = document.getElementById('signin-link');
+      if (AUTH_STATE.user) {
+        var name = AUTH_STATE.user.displayName || AUTH_STATE.user.email;
+        nameEl.textContent = name;
+        avatarEl.textContent = String(name).charAt(0).toUpperCase();
+        userMenu.classList.remove('hidden');
+        signinLink.classList.add('hidden');
+      } else {
+        nameEl.textContent = AUTH_STATE.authEnabled ? 'Signed out' : 'Guest';
+        avatarEl.textContent = AUTH_STATE.authEnabled ? '?' : 'G';
+        userMenu.classList.add('hidden');
+        signinLink.classList.remove('hidden');
+      }
+    }
+
+    function setStatusMessage(id, text, isError) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = text || '';
+      el.style.color = isError ? '#c0392b' : '#666';
+    }
+
+    function renderUsers() {
+      var users = AUTH_STATE.users || [];
+      var container = document.getElementById('users-content');
+
+      if (users.length === 0) {
+        container.innerHTML = '<p class="no-data">No users yet.</p>';
+        return;
+      }
+
+      var currentEmail = AUTH_STATE.user ? AUTH_STATE.user.email : '';
+
+      var html = '<table class="admin-table has-actions"><thead>'
+        + '<tr><th>User</th><th>Role</th><th>Created</th><th>Actions</th></tr>'
+        + '</thead><tbody>';
+
+      users.forEach(function (u) {
+        var isSelf = (u.email === currentEmail);
+        var rolePill = u.isAdmin
+          ? '<span class="pill admin">Portal admin</span>'
+          : '<span class="pill">Standard user</span>';
+
+        // Action buttons
+        var actions = '';
+
+        // Toggle admin
+        if (!isSelf) {
+          if (u.isAdmin) {
+            actions += '<button class="btn-action" type="button" onclick=\'toggleAdmin(' + Number(u.id) + ', false)\' title="Demote to standard user">Demote</button>';
+          } else {
+            actions += '<button class="btn-action" type="button" onclick=\'toggleAdmin(' + Number(u.id) + ', true)\' title="Promote to portal admin">Promote</button>';
+          }
+        }
+
+        // Reset password
+        actions += '<button class="btn-action" type="button" onclick=\'promptResetPassword(' + Number(u.id) + ', ' + JSON.stringify(escHtml(u.displayName || u.email)) + ')\' title="Generate a password reset code">Reset Code</button>';
+
+        // Delete (not self)
+        if (!isSelf) {
+          actions += '<button class="btn-remove" type="button" onclick=\'deleteUser(' + Number(u.id) + ', ' + JSON.stringify(escHtml(u.displayName || u.email)) + ')\' title="Delete this account">Delete</button>';
+        }
+
+        html += '<tr>'
+          + '<td><strong>' + escHtml(u.displayName || u.email) + '</strong><br><span class="hub-url">' + escHtml(u.email) + '</span>'
+          + (isSelf ? ' <span class="pill" style="font-size:0.7em;vertical-align:middle">you</span>' : '') + '</td>'
+          + '<td>' + rolePill + '</td>'
+          + '<td>' + isoTime(u.createdAt) + '</td>'
+          + '<td class="action-cell">' + actions + '</td>'
+          + '</tr>';
+      });
+
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    }
+
+    // ── Actions ─────────────────────────────────────────────────
+
+    window.toggleAdmin = function (userId, makeAdmin) {
+      var verb = makeAdmin ? 'Promote this user to portal admin?' : 'Demote this user to standard user?';
+      if (!confirm(verb)) return;
+      fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: userId, isAdmin: makeAdmin })
+      })
+        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+        .then(function (result) {
+          if (!result.ok) throw new Error(result.data.error || 'Failed to update user');
+          AUTH_STATE.users = result.data.users || [];
+          renderUsers();
+        })
+        .catch(function (err) {
+          setStatusMessage('create-user-msg', err.message, true);
+        });
+    };
+
+    window.promptResetPassword = function (userId, displayName) {
+      if (!confirm('Generate a password reset code for ' + displayName + '?')) return;
+      fetch('/api/admin/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: userId })
+      })
+        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+        .then(function (result) {
+          if (!result.ok) throw new Error(result.data.error || 'Failed to generate reset code');
+          var code = result.data.code;
+          // Show the code in a prominent way
+          var codeReveal = document.getElementById('setup-code-reveal');
+          document.getElementById('setup-code-value').textContent = code;
+          codeReveal.classList.remove('hidden');
+          setStatusMessage('create-user-msg', 'Reset code generated for ' + displayName + '. Share it with the user.');
+        })
+        .catch(function (err) {
+          setStatusMessage('create-user-msg', err.message, true);
+        });
+    };
+
+    window.deleteUser = function (userId, displayName) {
+      if (!confirm('Permanently delete the account for ' + displayName + '? This cannot be undone.')) return;
+      fetch('/api/admin/users?id=' + encodeURIComponent(userId), {
+        method: 'DELETE'
+      })
+        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+        .then(function (result) {
+          if (!result.ok) throw new Error(result.data.error || 'Failed to delete user');
+          AUTH_STATE.users = result.data.users || [];
+          renderUsers();
+          setStatusMessage('create-user-msg', 'User deleted.');
+        })
+        .catch(function (err) {
+          setStatusMessage('create-user-msg', err.message, true);
+        });
+    };
+
+    // ── Boot ────────────────────────────────────────────────────
+
+    function boot() {
+      fetchAuthMode()
+        .then(function () {
+          updateUserChrome();
+          if (!AUTH_STATE.authenticated) {
+            window.location.href = '/sign-in/?next=%2Fportal%2Fadmin%2F';
+            return Promise.reject(new Error('signin'));
+          }
+          if (!AUTH_STATE.canManageHubs) {
+            window.location.href = '/portal/';
+            return Promise.reject(new Error('dashboard'));
+          }
+          return fetchUsers();
+        })
+        .then(function () {
+          renderUsers();
+        })
+        .catch(function (err) {
+          if (err && (err.message === 'signin' || err.message === 'dashboard')) return;
+          document.getElementById('users-content').innerHTML = '<p class="no-data">Failed to load user data.</p>';
+        });
+    }
+
+    function handleLogout() {
+      fetch('/api/logout', { method: 'POST' })
+        .then(function () {
+          window.location.href = '/';
+        });
+    }
+
+    // ── Create User form handler ────────────────────────────────
+
+    document.getElementById('create-user-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var form = this;
+      var payload = {
+        displayName: form.elements.displayName.value.trim(),
+        email: form.elements.email.value.trim(),
+        isAdmin: form.elements.portalRole.value === 'admin'
+      };
+      fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+        .then(function (result) {
+          if (!result.ok) throw new Error(result.data.error || 'Failed to create user');
+          AUTH_STATE.users = result.data.users || [];
+          renderUsers();
+          form.reset();
+          // Show the setup code
+          if (result.data.setupCode) {
+            document.getElementById('setup-code-value').textContent = result.data.setupCode;
+            document.getElementById('setup-code-reveal').classList.remove('hidden');
+            setStatusMessage('create-user-msg', 'Account created. Share the setup code below with the user.');
+          } else {
+            setStatusMessage('create-user-msg', 'Account created.');
+          }
+        })
+        .catch(function (err) {
+          setStatusMessage('create-user-msg', err.message, true);
+        });
+    });
+
+    document.getElementById('logout-btn').addEventListener('click', handleLogout);
+
+    // User menu dropdown toggle
+    (function() {
+      var trigger = document.getElementById('user-menu-trigger');
+      var dropdown = document.getElementById('user-dropdown');
+      if (trigger && dropdown) {
+        trigger.addEventListener('click', function(e) {
+          e.stopPropagation();
+          dropdown.classList.toggle('open');
+        });
+        document.addEventListener('click', function() {
+          dropdown.classList.remove('open');
+        });
+      }
+    })();
+
+    // Copy setup code button
+    document.getElementById('copy-setup-code-btn').addEventListener('click', function () {
+      var code = document.getElementById('setup-code-value').textContent;
+      navigator.clipboard.writeText(code).then(function () {
+        var btn = document.getElementById('copy-setup-code-btn');
+        btn.textContent = '\u2714 Copied';
+        setTimeout(function () { btn.textContent = 'Copy'; }, 2000);
+      });
+    });
+
+    boot();
+  </script>
+</body>
+</html>

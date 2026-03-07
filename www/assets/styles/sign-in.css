@@ -93,6 +93,22 @@ button:not(.password-toggle):hover {
   font-size: 0.9rem;
 }
 
+.form-links {
+  margin-top: 12px;
+  font-size: 0.85rem;
+  text-align: center;
+  color: #888;
+}
+
+.form-links a {
+  color: #0969da;
+  text-decoration: none;
+}
+
+.form-links a:hover {
+  text-decoration: underline;
+}
+
 .error {
   color: #c0392b;
 }

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign Up — Awan Saya</title>
+  <link rel="stylesheet" href="/assets/styles/common.css">
+  <link rel="stylesheet" href="/assets/styles/sign-in.css">
+  <script src="/assets/scripts/password-toggle.js" defer></script>
+</head>
+<body>
+  <div class="topnav">
+    <a href="/" class="logo"><em>Awan</em>Saya</a>
+    <div class="spacer"></div>
+    <a href="/sign-in/" class="nav-link">Sign In</a>
+  </div>
+
+  <div class="shell">
+    <div class="card">
+      <h1>Create Your Account</h1>
+      <p class="sub">Enter the email address from your invitation to get started.</p>
+
+      <!-- Step 1: enter email to check for invitation -->
+      <div id="email-step">
+        <form id="email-check-form">
+          <input name="email" type="email" placeholder="Email" autocomplete="username" required>
+          <button type="submit">Continue</button>
+        </form>
+        <div id="email-msg" class="msg hidden"></div>
+      </div>
+
+      <!-- Step 2: complete registration -->
+      <div id="register-step" class="hidden">
+        <p class="sub" id="register-email-label"></p>
+        <form id="register-form">
+          <input name="displayName" type="text" placeholder="Display name" autocomplete="name" required>
+          <div class="password-field">
+            <input id="reg-password" name="password" type="password" placeholder="Password (min 8 characters)" autocomplete="new-password" required minlength="8">
+            <button class="password-toggle" type="button" data-password-toggle aria-controls="reg-password" aria-pressed="false">Show</button>
+          </div>
+          <div class="password-field">
+            <input id="reg-confirm" name="confirmPassword" type="password" placeholder="Confirm password" autocomplete="new-password" required minlength="8">
+            <button class="password-toggle" type="button" data-password-toggle aria-controls="reg-confirm" aria-pressed="false">Show</button>
+          </div>
+          <button type="submit">Create Account</button>
+        </form>
+        <div id="register-msg" class="msg hidden"></div>
+      </div>
+
+      <!-- Already signed in -->
+      <div id="signed-in-view" class="hidden">
+        <h1>Already Signed In</h1>
+        <p class="sub">You already have an active session.</p>
+        <div class="actions">
+          <button id="continue-btn" type="button">Go to Dashboard</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var pendingEmail = '';
+
+    function setMsg(id, text, cls) {
+      var el = document.getElementById(id);
+      el.className = 'msg ' + cls;
+      el.textContent = text;
+      el.classList.remove('hidden');
+    }
+
+    function clearMsg(id) {
+      var el = document.getElementById(id);
+      el.classList.add('hidden');
+      el.textContent = '';
+    }
+
+    // Check if already signed in
+    fetch('/api/auth-mode')
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.authenticated) {
+          document.getElementById('email-step').classList.add('hidden');
+          document.getElementById('signed-in-view').classList.remove('hidden');
+        }
+      });
+
+    // Step 1: Check email for pending invitations
+    document.getElementById('email-check-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      clearMsg('email-msg');
+      pendingEmail = this.elements.email.value.trim().toLowerCase();
+      if (!pendingEmail) return;
+
+      // Try to check if the email has pending invitations by attempting sign-up validation
+      // We just proceed to step 2 — the server will validate on submit
+      document.getElementById('email-step').classList.add('hidden');
+      document.getElementById('register-step').classList.remove('hidden');
+      document.getElementById('register-email-label').textContent = 'Creating account for ' + pendingEmail;
+    });
+
+    // Step 2: Complete registration
+    document.getElementById('register-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      clearMsg('register-msg');
+
+      var displayName = this.elements.displayName.value.trim();
+      var password = this.elements.password.value;
+      var confirm = this.elements.confirmPassword.value;
+
+      if (password !== confirm) {
+        setMsg('register-msg', 'Passwords do not match.', 'error');
+        return;
+      }
+
+      var btn = this.querySelector('button[type="submit"]');
+      btn.disabled = true;
+      btn.textContent = 'Creating…';
+
+      fetch('/api/sign-up', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: pendingEmail,
+          displayName: displayName,
+          password: password
+        })
+      })
+        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+        .then(function (result) {
+          if (!result.ok) throw new Error(result.data.error || 'Sign-up failed');
+          setMsg('register-msg', result.data.message || 'Account created!', 'ok');
+          setTimeout(function () { window.location.href = '/portal/'; }, 1200);
+        })
+        .catch(function (err) {
+          btn.disabled = false;
+          btn.textContent = 'Create Account';
+          setMsg('register-msg', err.message, 'error');
+        });
+    });
+
+    document.getElementById('continue-btn').addEventListener('click', function () {
+      window.location.href = '/portal/';
+    });
+  </script>
+</body>
+</html>

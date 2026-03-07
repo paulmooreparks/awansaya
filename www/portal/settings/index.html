@@ -6,12 +6,14 @@
   <title>Settings — Awan Saya</title>
   <link rel="stylesheet" href="/assets/styles/common.css">
   <link rel="stylesheet" href="/assets/styles/portal.css">
+  <script src="/assets/scripts/password-toggle.js" defer></script>
 </head>
 <body>
   <div class="topnav">
     <a href="/" class="logo"><em>Awan</em>Saya</a>
     <nav>
       <a href="/portal/">Dashboard</a>
+      <a id="admin-link" href="/portal/admin/" class="hidden">Admin</a>
     </nav>
     <div class="user-area">
       <a id="signin-link" href="/sign-in/?next=%2Fportal%2Fsettings%2F">Sign In</a>
@@ -36,6 +38,7 @@
           <div class="side-nav-title">On this page</div>
           <nav class="side-nav-links">
             <a href="/portal/settings/">Top</a>
+            <a href="/portal/settings/#change-password">Change Password</a>
             <a href="/portal/settings/#api-tokens">Personal API Tokens</a>
             <a href="/portal/settings/#cli-usage">CLI Usage</a>
           </nav>
@@ -48,6 +51,30 @@
             <h1><span class="info-heading">Settings <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About Settings">?</button><span class="info-tip-popup" role="tooltip">Manage your personal API tokens for Tela CLI access.</span></span></span></h1>
           </div>
         </div>
+
+    <div class="card" id="change-password">
+      <h2><span class="info-heading">&#x1F512; Change Password <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About Change Password">?</button><span class="info-tip-popup" role="tooltip">Update your password. You must provide your current password for verification.</span></span></span></h2>
+      <div class="subcard">
+        <form class="admin-form stacked-form" id="change-password-form">
+          <div class="password-field full-span">
+            <input id="current-password" name="currentPassword" type="password" placeholder="Current password" autocomplete="current-password" required>
+            <button class="password-toggle" type="button" data-password-toggle aria-controls="current-password" aria-pressed="false">Show</button>
+          </div>
+          <div class="password-field full-span">
+            <input id="new-password" name="newPassword" type="password" placeholder="New password (min 8 characters)" autocomplete="new-password" required minlength="8">
+            <button class="password-toggle" type="button" data-password-toggle aria-controls="new-password" aria-pressed="false">Show</button>
+          </div>
+          <div class="password-field full-span">
+            <input id="confirm-password" name="confirmPassword" type="password" placeholder="Confirm new password" autocomplete="new-password" required minlength="8">
+            <button class="password-toggle" type="button" data-password-toggle aria-controls="confirm-password" aria-pressed="false">Show</button>
+          </div>
+          <div class="full-span">
+            <button type="submit">Update Password</button>
+          </div>
+        </form>
+        <div class="status-msg" id="change-password-msg"></div>
+      </div>
+    </div>
 
     <div class="card" id="api-tokens">
       <div class="card-head">
@@ -62,6 +89,7 @@
       <div class="section-stack">
         <div class="subcard">
           <h3><span class="info-heading">Generate Token <span class="info-tip"><button class="info-tip-trigger" type="button" aria-label="About generating tokens">?</button><span class="info-tip-popup" role="tooltip">Give the token a descriptive name (e.g. "laptop", "workstation"). The token value is shown only once — copy it immediately.</span></span></span></h3>
+          <p>Give the token a descriptive name (e.g. "laptop", "workstation").</p>
           <form class="inline-form" id="create-token-form">
             <input name="name" placeholder="Token name (e.g. laptop)" required maxlength="128">
             <button type="submit">Generate Token</button>
@@ -327,6 +355,43 @@
       }
     })();
 
+    // ── Change Password ──────────────────────────────────────────
+    document.getElementById('change-password-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var form = this;
+      var currentPassword = form.elements.currentPassword.value;
+      var newPassword = form.elements.newPassword.value;
+      var confirmPassword = form.elements.confirmPassword.value;
+
+      if (newPassword !== confirmPassword) {
+        setStatusMessage('change-password-msg', 'New passwords do not match.', true);
+        return;
+      }
+
+      var btn = form.querySelector('button[type="submit"]');
+      btn.disabled = true;
+      btn.textContent = 'Updating…';
+
+      fetch('/api/me/password', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword: currentPassword, newPassword: newPassword })
+      })
+        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+        .then(function (result) {
+          btn.disabled = false;
+          btn.textContent = 'Update Password';
+          if (!result.ok) throw new Error(result.data.error || 'Failed to update password');
+          form.reset();
+          setStatusMessage('change-password-msg', 'Password updated successfully.');
+        })
+        .catch(function (err) {
+          btn.disabled = false;
+          btn.textContent = 'Update Password';
+          setStatusMessage('change-password-msg', err.message, true);
+        });
+    });
+
     function boot() {
       // Set portal URL hint from current location
       var portalUrlEl = document.getElementById('portal-url');
@@ -337,6 +402,10 @@
       fetchAuthMode()
         .then(function () {
           updateUserChrome();
+          if (AUTH_STATE.canManageHubs) {
+            var al = document.getElementById('admin-link');
+            if (al) al.classList.remove('hidden');
+          }
           if (!AUTH_STATE.authenticated) {
             window.location.href = '/sign-in/?next=%2Fportal%2Fsettings%2F';
             return Promise.reject(new Error('signin'));
