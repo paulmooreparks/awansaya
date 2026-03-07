@@ -63,7 +63,7 @@ Expose only what the team needs (SSH + DB ports, admin HTTP, etc.).
 On a developer machine:
 
 ```bash
-tela login https://awansaya.net
+tela remote add awansaya https://awansaya.net
 ```
 
 Then connect using hub names:
@@ -101,4 +101,4 @@ You should see:
 ### Developers can’t connect by hub name
 
 - Confirm `/api/hubs` returns the directory.
-- Confirm `tela login` was run.
+- Confirm `tela remote list` shows the remote.

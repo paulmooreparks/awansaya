@@ -33,11 +33,11 @@ Awan Saya doesn’t require one pattern or the other. It helps teams manage hubs
 
 | Capability | Tela alone | With Awan Saya |
 |------------|-----------|----------------|
-| **Hub discovery** | Manual — pass full `wss://` URLs or maintain local `hubs.yaml` | `tela login` once, then use short names like `owlsnest` |
+| **Hub discovery** | Manual — pass full `wss://` URLs or maintain local `hubs.yaml` | `tela remote add` once, then use short names like `owlsnest` |
 | **Multi-hub view** | Each hub has its own console | Portal aggregates all hubs in one dashboard |
 | **Download distribution** | Build from source or manual download | Landing page with OS detection, GitHub Release integration |
 | **Identity & access** | Per-hub tokens | Centralized auth, portal-scoped access (SSO/RBAC planned) |
-| **Onboarding** | Read docs, configure manually | `tela login https://awansaya.net` → done |
+| **Onboarding** | Read docs, configure manually | `tela remote add awansaya https://awansaya.net` → done |
 
 ---
 
@@ -51,14 +51,14 @@ Awan Saya doesn’t require one pattern or the other. It helps teams manage hubs
 
 - Publish a hub URL (your hub console/API must be reachable).
 - Add the hub to Awan Saya’s hub directory.
-- On any client machine: download `tela`, run `tela login https://awansaya.net`, then `tela connect -hub <hubName> -machine <machine>`.
+- On any client machine: download `tela`, run `tela remote add awansaya https://awansaya.net`, then `tela connect -hub <hubName> -machine <machine>`.
 
 Detailed HOWTO: `howto/personal-cloud.md`
 
 **With Tela + Awan Saya:**
 
 - `telad` on your home machines, outbound to your hub. No port forwarding, no dynamic DNS.
-- Register the hub on Awan Saya. From any machine: download `tela`, `tela login`, `tela connect -hub myhub -machine nas`.
+- Register the hub on Awan Saya. From any machine: download `tela`, `tela remote add awansaya https://awansaya.net`, `tela connect -hub myhub -machine nas`.
 - The portal shows all your machines and their status across all your hubs.
 
 **Why not alternatives?**
@@ -68,7 +68,7 @@ Detailed HOWTO: `howto/personal-cloud.md`
 | **Tailscale / ZeroTier** | Requires TUN device. Blocked on managed corporate laptops. |
 | **Cloudflare Tunnel** | Awkward for raw TCP (SSH/RDP). |
 | **WireGuard (raw)** | Needs admin/root on both ends, port forwarding, manual key management. |
-| **tela + Awan Saya** | Zero-install, no-admin client. Hub name resolution via portal. One login, connect by name. |
+| **tela + Awan Saya** | Zero-install, no-admin client. Hub name resolution via remote. One command, connect by name. |
 
 ---
 
@@ -80,7 +80,7 @@ Detailed HOWTO: `howto/personal-cloud.md`
 
 - Run one hub per environment or site.
 - Add all hubs to Awan Saya.
-- Onboard users via one portal login; connect by hub name.
+- Onboard users via one remote add; connect by hub name.
 - Choose endpoint-agent vs gateway/bridge per environment constraints.
 
 Detailed HOWTO: `howto/distributed-teams.md`
@@ -89,7 +89,7 @@ Detailed HOWTO: `howto/distributed-teams.md`
 
 - `telad` on each dev machine, registering outbound to team hubs. IT opens no inbound ports.
 - Team lead registers hubs in Awan Saya: "dev", "staging", "prod".
-- New developers: `tela login https://company.awansaya.net` → see all available hubs → `tela connect -hub staging -machine db01`.
+- New developers: `tela remote add company https://company.awansaya.net` → see all available hubs → `tela connect -hub staging -machine db01`.
 - **Service-level granularity**: Expose only SSH:22 and Postgres:5432, not the whole network.
 - **Contractor access**: Scope a contractor to one hub. Revoke by removing from the portal. No VPN client to uninstall.
 
@@ -114,7 +114,7 @@ Detailed HOWTO: `howto/distributed-teams.md`
 - Deploy a hub per customer/site (or per fleet segment).
 - Add hubs to Awan Saya so techs can discover them by name.
 - Deploy `telad` on devices (or deploy a site gateway `telad`).
-- Techs use `tela login` once, then connect by hub name.
+- Techs use `tela remote add` once, then connect by hub name.
 
 Detailed HOWTO: `howto/iot-edge.md`
 
@@ -176,7 +176,7 @@ Detailed HOWTO: `howto/production-access.md`
 
 - Create one hub per customer (recommended isolation).
 - Add all customer hubs to Awan Saya.
-- Onboard techs via portal login; connect by hub name.
+- Onboard techs via remote setup; connect by hub name.
 - Use gateway/bridge when endpoints can’t run agents.
 
 Detailed HOWTO: `howto/msp-it-support.md`
@@ -188,7 +188,7 @@ Detailed HOWTO: `howto/msp-it-support.md`
 - Customer machines are behind NATs. Outbound-only is essential.
 - Zero-install client — connect from any machine without installing software.
 
-**Awan Saya's role:** This is the MSP's operational dashboard. Without it, the MSP has a hub console per customer. With it, one portal, one login.
+**Awan Saya's role:** This is the MSP's operational dashboard. Without it, the MSP has a hub console per customer. With it, one portal, one remote.
 
 **Why not alternatives?**
 
@@ -208,7 +208,7 @@ Detailed HOWTO: `howto/msp-it-support.md`
 
 - Run a hub per lab/course and register lab machines.
 - Add hubs to Awan Saya so students can discover them by name.
-- Students `tela login` and connect to assigned machines.
+- Students `tela remote add` and connect to assigned machines.
 
 Detailed HOWTO: `howto/education-labs.md`
 

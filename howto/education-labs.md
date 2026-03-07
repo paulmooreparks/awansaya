@@ -40,7 +40,7 @@ Expose RDP/SSH as needed.
 ## Step 4 — Student workflow
 
 ```bash
-tela login https://awansaya.net
+tela remote add school https://awansaya.net
 
 tela machines -hub cs101
 

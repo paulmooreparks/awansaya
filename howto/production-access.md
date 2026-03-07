@@ -35,7 +35,7 @@ Deploy/restart Awan Saya.
 
 Set `AWANSAYA_API_TOKEN` in a `.env` file (never committed) next to `docker-compose.yml`.
 
-The hub directory is always readable. Adding/removing hubs and `tela login` require the token.
+The hub directory is always readable. Adding/removing hubs and `tela remote add` require the token.
 
 ---
 
@@ -50,7 +50,7 @@ Expose only required ports.
 ## Step 5 — Operator workflow
 
 ```bash
-tela login https://awansaya.net
+tela remote add awansaya https://awansaya.net
 
 tela machines -hub prod-us-east
 
@@ -66,4 +66,4 @@ Use SSH/DB tooling against localhost.
 ### Operators can’t resolve prod hub name
 
 - Confirm `/api/hubs` includes the hub.
-- Confirm `tela login` completed and token (if required) is correct.
+- Confirm `tela remote list` shows the remote and token (if required) is correct.

@@ -45,7 +45,7 @@ Set `AWANSAYA_API_TOKEN` in a `.env` file so that adding/removing hubs requires 
 ## Step 4 — Tech workflow
 
 ```bash
-tela login https://awansaya.net
+tela remote add awansaya https://awansaya.net
 
 tela machines -hub acme
 

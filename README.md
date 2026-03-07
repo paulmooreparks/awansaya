@@ -56,13 +56,13 @@ See also:
 
 ## CLI Integration
 
-The Tela CLI resolves short hub names via the portal:
+The Tela CLI resolves short hub names via configured remotes. Add Awan Saya as a remote:
 
 ```bash
-tela login https://awansaya.net       # authenticate once
-tela machines -hub owlsnest            # hub name resolved via /api/hubs
+tela remote add awansaya https://awansaya.net   # configure once
+tela machines -hub owlsnest                      # hub name resolved via /api/hubs
 tela connect -hub owlsnest -machine barn
-tela logout                            # remove stored credentials
+tela remote remove awansaya                      # remove the remote
 ```
 
 ## API

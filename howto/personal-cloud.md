@@ -3,7 +3,7 @@
 This guide shows how to use Awan Saya as the platform layer for Tela so you can:
 
 - Discover hubs by short name (no copying `wss://...` URLs around)
-- Use one portal login for hub name resolution
+- Use one `tela remote add` for hub name resolution
 - View hub/machine status in the portal dashboard
 
 It assumes:
@@ -17,7 +17,7 @@ It assumes:
 
 - Awan Saya maintains a hub directory (currently configured via `www/portal/config.json`).
 - The portal server proxies each hub's `/api/status` and `/api/history` on behalf of the browser, using a stored viewer token per hub.
-- The `tela` CLI can resolve hub names via Awan Saya’s `/api/hubs` endpoint after `tela login`.
+- The `tela` CLI can resolve hub names via Awan Saya's `/api/hubs` endpoint after `tela remote add`.
 
 ---
 
@@ -89,7 +89,7 @@ Once registered, the hub console should show machines/services.
 
 ---
 
-## Step 5 — Client workflow (hub names via portal login)
+## Step 5 — Client workflow (hub names via remote)
 
 On the machine you want to connect *from*:
 
@@ -97,11 +97,11 @@ On the machine you want to connect *from*:
 2. Run:
 
 ```bash
-tela login https://awansaya.net
+tela remote add awansaya https://awansaya.net
 ```
 
-- If your portal enforces `AWANSAYA_API_TOKEN`, paste the token when prompted.
-- If your portal is in open mode, you can press Enter to skip.
+- If your Awan Saya instance enforces `AWANSAYA_API_TOKEN`, paste the token when prompted.
+- If it is in open mode, you can press Enter to skip.
 
 3. List machines by hub name:
 
@@ -124,7 +124,7 @@ tela connect -hub owlsnest -machine barn
 ### `tela machines -hub owlsnest` says it can’t resolve the hub
 
 - Confirm `https://awansaya.net/api/hubs` lists the hub.
-- Confirm you logged in: `tela login https://awansaya.net`.
+- Confirm you added the remote: `tela remote list`.
 - Confirm the hub name matches (case-insensitive match is expected, but keep it consistent).
 
 ### Hub appears in Awan Saya but status is failing

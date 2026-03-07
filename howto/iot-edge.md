@@ -61,7 +61,7 @@ Expose SSH (22) and any necessary admin ports.
 On a technician machine:
 
 ```bash
-tela login https://awansaya.net
+tela remote add awansaya https://awansaya.net
 ```
 
 Then connect by hub name:
